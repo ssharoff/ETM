@@ -2,6 +2,10 @@
 
 from __future__ import print_function
 
+import time
+starttime=int(time.time())
+
+
 import argparse
 import torch
 import pickle 
@@ -31,12 +35,12 @@ parser.add_argument('--batch_size', type=int, default=1000, help='input batch si
 parser.add_argument('-d', '--dictionary', type=str, help='existing dictionary file')
 
 ### model-related arguments
-parser.add_argument('--num_topics', type=int, default=50, help='number of topics')
+parser.add_argument('-n', '--num_topics', type=int, default=50, help='number of topics')
 parser.add_argument('--rho_size', type=int, default=300, help='dimension of rho')
 parser.add_argument('--emb_size', type=int, default=300, help='dimension of embeddings')
 parser.add_argument('--t_hidden_size', type=int, default=800, help='dimension of hidden space of q(theta)')
 parser.add_argument('--theta_act', type=str, default='relu', help='tanh, softplus, relu, rrelu, leakyrelu, elu, selu, glu)')
-parser.add_argument('--train_embeddings', type=int, default=0, help='whether to fix rho or train it')
+parser.add_argument('-e', '--train_embeddings', type=int, default=0, help='whether to fix rho or train it')
 
 ### optimization-related arguments
 parser.add_argument('--lr', type=float, default=0.005, help='learning rate')
@@ -60,6 +64,7 @@ parser.add_argument('--eval_batch_size', type=int, default=1000, help='input bat
 parser.add_argument('--load_from', type=str, default='', help='the name of the ckpt to eval from')
 parser.add_argument('--tc', type=int, default=0, help='whether to compute topic coherence or not')
 parser.add_argument('--td', type=int, default=0, help='whether to compute topic diversity or not')
+parser.add_argument('-v', '--verbosity', type=int, default=1)
 
 args = parser.parse_args()
 
@@ -72,12 +77,14 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed(args.seed)
 
 if args.mode == 'apply':
-    vocab=pickle.load(open(args.dictionary))
+    vocab=pickle.load(open(args.dictionary,'rb'))
+    vocab_size = len(vocab)
+    args.vocab_size = vocab_size
     token_file = os.path.join(args.data_path, 'bow_ts_tokens.mat')
     count_file = os.path.join(args.data_path, 'bow_ts_counts.mat')
     train_tokens = scipy.io.loadmat(token_file)['tokens'].squeeze()
     train_counts = scipy.io.loadmat(count_file)['counts'].squeeze()
-    args.num_docs_train = len(test_tokens)
+    args.num_docs_train = len(train_tokens)
 else:
     # 1. vocabulary
     vocab, train, valid, test = data.get_data(os.path.join(args.data_path))
@@ -105,6 +112,9 @@ else:
     test_2_counts = test['counts_2']
     args.num_docs_test_2 = len(test_2_tokens)
 
+xtime=int(time.time())
+if args.verbosity>0:
+    print('Loaded data in {} secs'.format(xtime-starttime), file=sys.stderr)
 embeddings = None
 if not args.train_embeddings:
     emb_path = args.emb_path
@@ -128,6 +138,10 @@ if not args.train_embeddings:
     embeddings = torch.from_numpy(embeddings).to(device)
     args.embeddings_dim = embeddings.size()
 
+xtime=int(time.time())
+if args.verbosity>0:
+    print('Loaded data and embeddings in {} secs'.format(xtime-starttime), file=sys.stderr)
+
 print('=*'*100)
 print('Training an Embedded Topic Model on {} with the following settings: {}'.format(args.dataset.upper(), args))
 print('=*'*100)
@@ -136,7 +150,7 @@ print('=*'*100)
 if not os.path.exists(args.save_path):
     os.makedirs(args.save_path)
 
-if args.mode == 'eval':
+if args.mode in ['eval', 'apply']:
     ckpt = args.load_from
 else:
     ckpt = os.path.join(args.save_path, 
@@ -393,6 +407,7 @@ elif args.mode=='apply':
     model.eval()
 
     with torch.no_grad():
+        beta = model.get_beta()
         ## get most used topics
         indices = torch.tensor(range(args.num_docs_train))
         indices = torch.split(indices, args.batch_size)
@@ -408,10 +423,19 @@ elif args.mode=='apply':
             else:
                 normalized_data_batch = data_batch
             theta, _ = model.get_theta(normalized_data_batch)
+            thetabest = theta.argsort()
+            for doc in range(theta.shape[0]): # for each document in the batch
+                besttopics = thetabest[doc,-3:].tolist()
+                bestvalues = theta[doc,besttopics].tolist()
+                out=[(t,'%.3f' %v) for t, v in zip(besttopics,bestvalues)]
+                print(out)
             thetaAvg += theta.sum(0).unsqueeze(0) / args.num_docs_train
             weighed_theta = sums * theta
             thetaWeightedAvg += weighed_theta.sum(0).unsqueeze(0)
             if idx % 100 == 0 and idx > 0:
                 print('batch: {}/{}'.format(idx, len(indices)))
         thetaWeightedAvg = thetaWeightedAvg.squeeze().cpu().numpy() / cnt
-        print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]))
+        print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]),file=sys.stderr)
+xtime=int(time.time())
+if args.verbosity>0:
+    print('Finished in {} secs'.format(xtime-starttime), file=sys.stderr)
