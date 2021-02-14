@@ -28,6 +28,7 @@ parser.add_argument('--data_path', type=str, default='data/20ng', help='director
 parser.add_argument('--emb_path', type=str, default='data/20ng_embeddings.txt', help='directory containing word embeddings')
 parser.add_argument('--save_path', type=str, default='./results', help='path to save results')
 parser.add_argument('--batch_size', type=int, default=1000, help='input batch size for training')
+parser.add_argument('-d', '--dictionary', type=str, help='existing dictionary file')
 
 ### model-related arguments
 parser.add_argument('--num_topics', type=int, default=50, help='number of topics')
@@ -41,7 +42,7 @@ parser.add_argument('--train_embeddings', type=int, default=0, help='whether to 
 parser.add_argument('--lr', type=float, default=0.005, help='learning rate')
 parser.add_argument('--lr_factor', type=float, default=4.0, help='divide learning rate by this...')
 parser.add_argument('--epochs', type=int, default=20, help='number of epochs to train...150 for 20ng 100 for others')
-parser.add_argument('--mode', type=str, default='train', help='train or eval model')
+parser.add_argument('--mode', type=str, default='train', help='train, eval or apply model')
 parser.add_argument('--optimizer', type=str, default='adam', help='choice of optimizer')
 parser.add_argument('--seed', type=int, default=2019, help='random seed (default: 1)')
 parser.add_argument('--enc_drop', type=float, default=0.0, help='dropout rate on encoder')
@@ -70,32 +71,39 @@ torch.manual_seed(args.seed)
 if torch.cuda.is_available():
     torch.cuda.manual_seed(args.seed)
 
-## get data
-# 1. vocabulary
-vocab, train, valid, test = data.get_data(os.path.join(args.data_path))
-vocab_size = len(vocab)
-args.vocab_size = vocab_size
+if args.mode == 'apply':
+    vocab=pickle.load(open(args.dictionary))
+    token_file = os.path.join(args.data_path, 'bow_ts_tokens.mat')
+    count_file = os.path.join(args.data_path, 'bow_ts_counts.mat')
+    train_tokens = scipy.io.loadmat(token_file)['tokens'].squeeze()
+    train_counts = scipy.io.loadmat(count_file)['counts'].squeeze()
+    args.num_docs_train = len(test_tokens)
+else:
+    # 1. vocabulary
+    vocab, train, valid, test = data.get_data(os.path.join(args.data_path))
+    vocab_size = len(vocab)
+    args.vocab_size = vocab_size
 
-# 1. training data
-train_tokens = train['tokens']
-train_counts = train['counts']
-args.num_docs_train = len(train_tokens)
+    # 1. training data
+    train_tokens = train['tokens']
+    train_counts = train['counts']
+    args.num_docs_train = len(train_tokens)
 
-# 2. dev set
-valid_tokens = valid['tokens']
-valid_counts = valid['counts']
-args.num_docs_valid = len(valid_tokens)
+    # 2. dev set
+    valid_tokens = valid['tokens']
+    valid_counts = valid['counts']
+    args.num_docs_valid = len(valid_tokens)
 
-# 3. test data
-test_tokens = test['tokens']
-test_counts = test['counts']
-args.num_docs_test = len(test_tokens)
-test_1_tokens = test['tokens_1']
-test_1_counts = test['counts_1']
-args.num_docs_test_1 = len(test_1_tokens)
-test_2_tokens = test['tokens_2']
-test_2_counts = test['counts_2']
-args.num_docs_test_2 = len(test_2_tokens)
+    # 3. test data
+    test_tokens = test['tokens']
+    test_counts = test['counts']
+    args.num_docs_test = len(test_tokens)
+    test_1_tokens = test['tokens_1']
+    test_1_counts = test['counts_1']
+    args.num_docs_test_1 = len(test_1_tokens)
+    test_2_tokens = test['tokens_2']
+    test_2_counts = test['counts_2']
+    args.num_docs_test_2 = len(test_2_tokens)
 
 embeddings = None
 if not args.train_embeddings:
@@ -322,7 +330,7 @@ if args.mode == 'train':
         model = torch.load(f)
     model = model.to(device)
     val_ppl = evaluate(model, 'val')
-else:   
+elif args.mode=='eval':   
     with open(ckpt, 'rb') as f:
         model = torch.load(f)
     model = model.to(device)
@@ -378,3 +386,32 @@ else:
             for word in queries:
                 print('word: {} .. etm neighbors: {}'.format(word, nearest_neighbors(word, rho_etm, vocab)))
             print('\n')
+elif args.mode=='apply':
+    with open(ckpt, 'rb') as f:
+        model = torch.load(f)
+    model = model.to(device)
+    model.eval()
+
+    with torch.no_grad():
+        ## get most used topics
+        indices = torch.tensor(range(args.num_docs_train))
+        indices = torch.split(indices, args.batch_size)
+        thetaAvg = torch.zeros(1, args.num_topics).to(device)
+        thetaWeightedAvg = torch.zeros(1, args.num_topics).to(device)
+        cnt = 0
+        for idx, ind in enumerate(indices):
+            data_batch = data.get_batch(train_tokens, train_counts, ind, args.vocab_size, device)
+            sums = data_batch.sum(1).unsqueeze(1)
+            cnt += sums.sum(0).squeeze().cpu().numpy()
+            if args.bow_norm:
+                normalized_data_batch = data_batch / sums
+            else:
+                normalized_data_batch = data_batch
+            theta, _ = model.get_theta(normalized_data_batch)
+            thetaAvg += theta.sum(0).unsqueeze(0) / args.num_docs_train
+            weighed_theta = sums * theta
+            thetaWeightedAvg += weighed_theta.sum(0).unsqueeze(0)
+            if idx % 100 == 0 and idx > 0:
+                print('batch: {}/{}'.format(idx, len(indices)))
+        thetaWeightedAvg = thetaWeightedAvg.squeeze().cpu().numpy() / cnt
+        print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]))
