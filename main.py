@@ -35,12 +35,12 @@ parser.add_argument('--batch_size', type=int, default=1000, help='input batch si
 parser.add_argument('-d', '--dictionary', type=str, help='existing dictionary file')
 
 ### model-related arguments
-parser.add_argument('-n', '--num_topics', type=int, default=50, help='number of topics')
+parser.add_argument('-n', '--num_topics', type=int, default=100, help='number of topics')
 parser.add_argument('--rho_size', type=int, default=300, help='dimension of rho')
 parser.add_argument('--emb_size', type=int, default=300, help='dimension of embeddings')
 parser.add_argument('--t_hidden_size', type=int, default=800, help='dimension of hidden space of q(theta)')
 parser.add_argument('--theta_act', type=str, default='relu', help='tanh, softplus, relu, rrelu, leakyrelu, elu, selu, glu)')
-parser.add_argument('-e', '--train_embeddings', type=int, default=0, help='whether to fix rho or train it')
+parser.add_argument('-e', '--train_embeddings', type=int, default=1, help='whether to fix rho or train it')
 
 ### optimization-related arguments
 parser.add_argument('--lr', type=float, default=0.005, help='learning rate')
@@ -48,7 +48,7 @@ parser.add_argument('--lr_factor', type=float, default=4.0, help='divide learnin
 parser.add_argument('--epochs', type=int, default=20, help='number of epochs to train...150 for 20ng 100 for others')
 parser.add_argument('--mode', type=str, default='train', help='train, eval or apply model')
 parser.add_argument('--optimizer', type=str, default='adam', help='choice of optimizer')
-parser.add_argument('--seed', type=int, default=2019, help='random seed (default: 1)')
+parser.add_argument('--seed', type=int, default=42, help='random seed')
 parser.add_argument('--enc_drop', type=float, default=0.0, help='dropout rate on encoder')
 parser.add_argument('--clip', type=float, default=0.0, help='gradient clipping')
 parser.add_argument('--nonmono', type=int, default=10, help='number of bad hits allowed')
@@ -57,13 +57,16 @@ parser.add_argument('--anneal_lr', type=int, default=0, help='whether to anneal 
 parser.add_argument('--bow_norm', type=int, default=1, help='normalize the bows or not')
 
 ### evaluation, visualization, and logging-related arguments
-parser.add_argument('--num_words', type=int, default=10, help='number of words for topic viz')
-parser.add_argument('--log_interval', type=int, default=2, help='when to log training')
+parser.add_argument('--num_words', type=int, default=20, help='number of words for topic viz')
+parser.add_argument('--log_interval', type=int, default=200, help='when to log training')
 parser.add_argument('--visualize_every', type=int, default=10, help='when to visualize results')
 parser.add_argument('--eval_batch_size', type=int, default=1000, help='input batch size for evaluation')
 parser.add_argument('--load_from', type=str, default='', help='the name of the ckpt to eval from')
-parser.add_argument('--tc', type=int, default=0, help='whether to compute topic coherence or not')
-parser.add_argument('--td', type=int, default=0, help='whether to compute topic diversity or not')
+parser.add_argument('--output', type=str, default='', help='the name of the output file')
+parser.add_argument('--tc', default=False, action='store_true', help='whether to compute topic coherence')
+parser.add_argument('--td', default=False, action='store_true', help='whether to compute topic diversity')
+parser.add_argument('--tp', default=False, action='store_true', help='whether to compute topic proportions')
+parser.add_argument('--threshold', type=float, default=0.5, help='threshold for including less significant topics into predictions')
 parser.add_argument('-v', '--verbosity', type=int, default=1)
 
 args = parser.parse_args()
@@ -75,7 +78,7 @@ np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 if torch.cuda.is_available():
     torch.cuda.manual_seed(args.seed)
-
+outfile=open(args.output,'w') if (len(args.output)>0 and not args.output=='-') else sys.stdout
 if args.mode == 'apply':
     vocab=pickle.load(open(args.dictionary,'rb'))
     vocab_size = len(vocab)
@@ -212,15 +215,15 @@ def train(epoch):
             cur_real_loss = round(cur_loss + cur_kl_theta, 2)
 
             print('Epoch: {} .. batch: {}/{} .. LR: {} .. KL_theta: {} .. Rec_loss: {} .. NELBO: {}'.format(
-                epoch, idx, len(indices), optimizer.param_groups[0]['lr'], cur_kl_theta, cur_loss, cur_real_loss))
+                epoch, idx, len(indices), optimizer.param_groups[0]['lr'], cur_kl_theta, cur_loss, cur_real_loss),file=outfile)
     
     cur_loss = round(acc_loss / cnt, 2) 
     cur_kl_theta = round(acc_kl_theta_loss / cnt, 2) 
     cur_real_loss = round(cur_loss + cur_kl_theta, 2)
-    print('*'*100)
+    print('*'*100,file=outfile)
     print('Epoch----->{} .. LR: {} .. KL_theta: {} .. Rec_loss: {} .. NELBO: {}'.format(
-            epoch, optimizer.param_groups[0]['lr'], cur_kl_theta, cur_loss, cur_real_loss))
-    print('*'*100)
+            epoch, optimizer.param_groups[0]['lr'], cur_kl_theta, cur_loss, cur_real_loss),file=outfile)
+    print('*'*100,file=outfile)
 
 def visualize(m, show_emb=True):
     if not os.path.exists('./results'):
@@ -242,11 +245,11 @@ def visualize(m, show_emb=True):
             top_words = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
             topic_words = [vocab[a] for a in top_words]
             topics_words.append(' '.join(topic_words))
-            print('Topic {}: {}'.format(k, topic_words))
+            print('Topic {}: {}'.format(k, topic_words),file=outfile)
 
         if show_emb:
             ## visualize word embeddings by using V to get nearest neighbors
-            print('#'*100)
+            print('#'*100,file=outfile)
             print('Visualize word embeddings by using output embedding matrix')
             try:
                 embeddings = m.rho.weight  # Vocab_size x E
@@ -255,8 +258,8 @@ def visualize(m, show_emb=True):
             neighbors = []
             for word in queries:
                 print('word: {} .. neighbors: {}'.format(
-                    word, nearest_neighbors(word, embeddings, vocab)))
-            print('#'*100)
+                    word, nearest_neighbors(word, embeddings, vocab)),file=outfile)
+            print('#'*100,file=outfile)
 
 def evaluate(m, source, tc=False, td=False):
     """Compute perplexity on document completion.
@@ -302,13 +305,13 @@ def evaluate(m, source, tc=False, td=False):
             cnt += 1
         cur_loss = acc_loss / cnt
         ppl_dc = round(math.exp(cur_loss), 1)
-        print('*'*100)
-        print('{} Doc Completion PPL: {}'.format(source.upper(), ppl_dc))
-        print('*'*100)
+        print('*'*100,file=outfile)
+        print('{} Doc Completion PPL: {}'.format(source.upper(), ppl_dc),file=outfile)
+        print('*'*100,file=outfile)
         if tc or td:
             beta = beta.data.cpu().numpy()
             if tc:
-                print('Computing topic coherence...')
+                print('Computing topic coherence...',file=outfile)
                 get_topic_coherence(beta, train_tokens, vocab)
             if td:
                 print('Computing topic diversity...')
@@ -320,10 +323,10 @@ if args.mode == 'train':
     best_epoch = 0
     best_val_ppl = 1e9
     all_val_ppls = []
-    print('\n')
-    print('Visualizing model quality before training...')
+    print('\n',file=outfile)
+    print('Visualizing model quality before training...',file=outfile)
     visualize(model)
-    print('\n')
+    print('\n',file=outfile)
     for epoch in range(1, args.epochs):
         train(epoch)
         val_ppl = evaluate(model, 'val')
@@ -354,38 +357,38 @@ elif args.mode=='eval':
         ## get document completion perplexities
         test_ppl = evaluate(model, 'test', tc=args.tc, td=args.td)
 
-        ## get most used topics
-        indices = torch.tensor(range(args.num_docs_train))
-        indices = torch.split(indices, args.batch_size)
-        thetaAvg = torch.zeros(1, args.num_topics).to(device)
-        thetaWeightedAvg = torch.zeros(1, args.num_topics).to(device)
-        cnt = 0
-        for idx, ind in enumerate(indices):
-            data_batch = data.get_batch(train_tokens, train_counts, ind, args.vocab_size, device)
-            sums = data_batch.sum(1).unsqueeze(1)
-            cnt += sums.sum(0).squeeze().cpu().numpy()
-            if args.bow_norm:
-                normalized_data_batch = data_batch / sums
-            else:
-                normalized_data_batch = data_batch
-            theta, _ = model.get_theta(normalized_data_batch)
-            thetaAvg += theta.sum(0).unsqueeze(0) / args.num_docs_train
-            weighed_theta = sums * theta
-            thetaWeightedAvg += weighed_theta.sum(0).unsqueeze(0)
-            if idx % 100 == 0 and idx > 0:
-                print('batch: {}/{}'.format(idx, len(indices)))
-        thetaWeightedAvg = thetaWeightedAvg.squeeze().cpu().numpy() / cnt
-        print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]))
+        if args.tp: ## get most used topics
+            indices = torch.tensor(range(args.num_docs_train))
+            indices = torch.split(indices, args.batch_size)
+            thetaAvg = torch.zeros(1, args.num_topics).to(device)
+            thetaWeightedAvg = torch.zeros(1, args.num_topics).to(device)
+            cnt = 0
+            for idx, ind in enumerate(indices):
+                data_batch = data.get_batch(train_tokens, train_counts, ind, args.vocab_size, device)
+                sums = data_batch.sum(1).unsqueeze(1)
+                cnt += sums.sum(0).squeeze().cpu().numpy()
+                if args.bow_norm:
+                    normalized_data_batch = data_batch / sums
+                else:
+                    normalized_data_batch = data_batch
+                theta, _ = model.get_theta(normalized_data_batch)
+                thetaAvg += theta.sum(0).unsqueeze(0) / args.num_docs_train
+                weighed_theta = sums * theta
+                thetaWeightedAvg += weighed_theta.sum(0).unsqueeze(0)
+                if idx % 100 == 0 and idx > 0:
+                    print('batch: {}/{}'.format(idx, len(indices)),file=outfile)
+            thetaWeightedAvg = thetaWeightedAvg.squeeze().cpu().numpy() / cnt
+            print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]))
 
         ## show topics
         beta = model.get_beta()
         topic_indices = list(np.random.choice(args.num_topics, 10)) # 10 random topics
-        print('\n')
+        print('\n',file=outfile)
         for k in range(args.num_topics):#topic_indices:
             gamma = beta[k]
             top_words = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
             topic_words = [vocab[a] for a in top_words]
-            print('Topic {}: {}'.format(k, topic_words))
+            print('Topic {}: {}'.format(k, topic_words),file=outfile)
 
         if args.train_embeddings:
             ## show etm embeddings 
@@ -395,11 +398,11 @@ elif args.mode=='eval':
                 rho_etm = model.rho.cpu()
             queries = ['andrew', 'woman', 'computer', 'sports', 'religion', 'man', 'love', 
                             'intelligence', 'money', 'politics', 'health', 'people', 'family']
-            print('\n')
-            print('ETM embeddings...')
+            print('\n',file=outfile)
+            print('ETM embeddings...',file=outfile)
             for word in queries:
-                print('word: {} .. etm neighbors: {}'.format(word, nearest_neighbors(word, rho_etm, vocab)))
-            print('\n')
+                print('word: {} .. etm neighbors: {}'.format(word, nearest_neighbors(word, rho_etm, vocab)),file=outfile)
+            print('\n',file=outfile)
 elif args.mode=='apply':
     with open(ckpt, 'rb') as f:
         model = torch.load(f)
@@ -427,15 +430,31 @@ elif args.mode=='apply':
             for doc in range(theta.shape[0]): # for each document in the batch
                 besttopics = thetabest[doc,-3:].tolist()
                 bestvalues = theta[doc,besttopics].tolist()
-                out=[(t,'%.3f' %v) for t, v in zip(besttopics,bestvalues)]
-                print(out)
+                lastv=1.0
+                out=[]
+                for t, v in zip(reversed(besttopics),reversed(bestvalues)):
+                    try: # to handle occasional NaNs
+                        outtuple=(float(int(v*1000))/1000,t)
+                    except:
+                        v=0.0
+                        outtuple=(v,t)
+                    if args.threshold>0: 
+                        if v/lastv>args.threshold: # Outputting only the most significant topics
+                            out.append(outtuple)
+                            v=lastv
+                        else:
+                            break
+                    else: # or everything
+                        out.append(outtuple)
+                print(out,file=outfile)
             thetaAvg += theta.sum(0).unsqueeze(0) / args.num_docs_train
             weighed_theta = sums * theta
             thetaWeightedAvg += weighed_theta.sum(0).unsqueeze(0)
             if idx % 100 == 0 and idx > 0:
-                print('batch: {}/{}'.format(idx, len(indices)))
+                print('batch: {}/{}'.format(idx, len(indices)),file=sys.stderr)
         thetaWeightedAvg = thetaWeightedAvg.squeeze().cpu().numpy() / cnt
-        print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]),file=sys.stderr)
+        print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]))
 xtime=int(time.time())
 if args.verbosity>0:
     print('Finished in {} secs'.format(xtime-starttime), file=sys.stderr)
+outfile.close()
