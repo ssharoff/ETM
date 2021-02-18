@@ -1,71 +1,22 @@
 # ETM
 
-My modifications to the code for Embedding Topic Modeling.  The main contributions concern a code to convert a one-line corpus to BoW dataset using a predefined vocabulary and to apply an existing topic model to this dataset. First run
+My modifications to the code for Embedding Topic Modeling.  My main contributions concern a code to convert a one-line corpus into a BoW representation and to apply an existing topic model to this dataset. 
+
+First use your own corpus in the one-line per document format to create a topic model:
 ```
-python3 data_new.py -c CORPUS.ol -d vocabulary.pkl -s CORPUSDIR
-```
-
-Then apply a model to this dataset:
-```
-python3 main.py --mode apply --dataset CORPUS --data_path CORPUSDIR --num_topics 50 --output CORPUS.topics.lst
-```
-
-The remainder is practically the same as in the original.
-
-This is code that accompanies the paper titled "Topic Modeling in Embedding Spaces" by Adji B. Dieng, Francisco J. R. Ruiz, and David M. Blei. (Arxiv link: https://arxiv.org/abs/1907.04907)
-
-ETM defines words and topics in the same embedding space. The likelihood of a word under ETM is a Categorical whose natural parameter is given by the dot product between the word embedding and its assigned topic's embedding. ETM is a document model that learns interpretable topics and word embeddings and is robust to large vocabularies that include rare words and stop words.
-
-## Dependencies
-
-+ python 3.7
-+ tested with pytorch 1.6 and 1.7
-
-## Datasets
-
-All the datasets are pre-processed and can be found below:
-
-+ https://bitbucket.org/franrruiz/data_nyt_largev_4/src/master/
-+ https://bitbucket.org/franrruiz/data_nyt_largev_5/src/master/
-+ https://bitbucket.org/franrruiz/data_nyt_largev_6/src/master/
-+ https://bitbucket.org/franrruiz/data_nyt_largev_7/src/master/
-+ https://bitbucket.org/franrruiz/data_stopwords_largev_2/src/master/ (this one contains stop words and was used to showcase robustness of ETM to stop words.)
-+ https://bitbucket.org/franrruiz/data_20ng_largev/src/master/
-
-All the scripts to pre-process a given dataset for ETM can be found in the folder 'scripts'. The script for 20NewsGroup is self-contained as it uses scikit-learn. If you want to run ETM on your own dataset, follow the script for New York Times (given as example) called data_nyt.py  
-
-## To Run
-
-To learn interpretable embeddings and topics using ETM on the 20NewsGroup dataset, run
-```
-python main.py --mode train --dataset 20ng --data_path data/20ng --num_topics 50 --train_embeddings 1 --epochs 1000
+python3 data_new.py -c CORPUS.ol -s DATADIR
+python3 main.py --mode train --dataset dataname --data_path DATADIR --num_topics 50 --train_embeddings 1 --epochs 50
+python3 main.py --mode eval --dataset dataname --data_path DATADIR --num_topics 50 --td --tc --tp --load_from results/etm_dataname_K_50....
 ```
 
-To evaluate perplexity on document completion, topic coherence, topic diversity, and visualize the topics/embeddings run
+
+
+Now this model can be applied to a new corpus
 ```
-python main.py --mode eval --dataset 20ng --data_path data/20ng --num_topics 50 --train_embeddings 1 --tc 1 --td 1 --load_from CKPT_PATH
+python3 data_new.py -c CORPUS-NEW.ol -d DATADIR/vocab.pkl -s DATADIR-NEW
+python3 main.py --mode apply --dataset dataname --data_path DATADIR-NEW --output CORPUSNEW.topics --num_topics 50 --load_from results/etm_dataname_K_50....
 ```
 
-To learn interpretable topics using ETM with pre-fitted word embeddings (called Labelled-ETM in the paper) on the 20NewsGroup dataset:
+The remainder is practically the same as in the original repository (https://github.com/adjidieng/ETM) 
 
-+ first fit the word embeddings. For example to use simple skipgram you can run
-```
-python skipgram.py --data_file PATH_TO_DATA --emb_file PATH_TO_EMBEDDINGS --dim_rho 300 --iters 50 --window_size 4 
-```
-
-+ then run the following 
-```
-python main.py --mode train --dataset 20ng --data_path data/20ng --emb_path PATH_TO_EMBEDDINGS --num_topics 50 --train_embeddings 0 --epochs 1000
-```
-
-## Citation
-
-```
-@article{dieng2019topic,
-  title={Topic modeling in embedding spaces},
-  author={Dieng, Adji B and Ruiz, Francisco J R and Blei, David M},
-  journal={arXiv preprint arXiv:1907.04907},
-  year={2019}
-}
-```
-
+This has been tried with Python 3.7 and Pytorch 1.7.1.

@@ -4,7 +4,7 @@
 # Serge Sharoff, University of Leeds. An extension from https://github.com/adjidieng/ETM
 # Modifications concern the possibility to choose the parameters and to encode new datasets using the same vocabulary
 # It does read the entire corpus into memory for efficient conversion to the BoW representation.
-# For a large (20GW) corpus this ends up with consuming 70G for a short period of time
+# For a large (20GW) corpus this ends up with consuming 70G
 
 import time
 starttime=int(time.time())
@@ -49,7 +49,7 @@ parser = argparse.ArgumentParser(description='The Embedded Topic Model')
 parser.add_argument('-c', '--corpusfile', type=str, help='corpus file name')
 parser.add_argument('-d', '--dictionary', type=str, help='existing dictionary file')
 parser.add_argument('-s', '--save_path', type=str, help='directory to save BoW corpus')
-parser.add_argument('-s', '--stops', type=str, default='stops.txt', help='stop words file')
+parser.add_argument('-o', '--stops', type=str, default='stops.txt', help='stop words file')
 parser.add_argument('-m', '--min_df', type=float, default=200, help='ignore terms that have a document frequency or percentage lower than')
 parser.add_argument('-x', '--max_df', type=float, default=0.7, help='ignore terms that have a document frequency or percentage higher than')
 
@@ -63,7 +63,7 @@ if args.dictionary:
 else:
     assert os.path.isfile(args.stops), 'Stop file {} does not exist'.format(args.stops)
 
-path_save = args.save_path if args.save_path else args.corpusfile + str(args.min_df) + '/'
+path_save = args.save_path + '/' if args.save_path else args.corpusfile + str(args.min_df) + '/'
 
 # Read data
 with open(args.corpusfile, 'r') as f:
@@ -241,9 +241,9 @@ else:
         pickle.dump(vocab, f)
     del vocab
 
-    # Split bow intro token/value pairs
+    # Split bow into token/value pairs
     if args.verbosity>0:
-        print('splitting bow intro token/value pairs and saving to disk...')
+        print('splitting bow into token/value pairs and saving to disk...')
 
     bow_tr_tokens, bow_tr_counts = split_bow(bow_tr, n_docs_tr)
     savemat(path_save + 'bow_tr_tokens.mat', {'tokens': bow_tr_tokens}, do_compression=True)
