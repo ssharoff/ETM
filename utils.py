@@ -9,7 +9,7 @@ def get_topic_diversity(beta, topk):
         list_w[k,:] = idx
     n_unique = len(np.unique(list_w))
     TD = n_unique / (topk * num_topics)
-    print('Topic diveristy is: {}'.format(TD))
+    print('Topic diversity is: {}'.format(TD))
 
 def get_document_frequency(data, wi, wj=None):
     if wj is None:

@@ -1,13 +1,25 @@
 # ETM
 
+My modifications to the code for Embedding Topic Modeling.  The main contributions concern a code to convert a one-line corpus to BoW dataset using a predefined vocabulary and to apply an existing topic model to this dataset. First run
+```
+python3 data_new.py -c CORPUS.ol -d vocabulary.pkl -s CORPUSDIR
+```
+
+Then apply a model to this dataset:
+```
+python3 main.py --mode apply --dataset CORPUS --data_path CORPUSDIR --num_topics 50 --output CORPUS.topics.lst
+```
+
+The remainder is practically the same as in the original.
+
 This is code that accompanies the paper titled "Topic Modeling in Embedding Spaces" by Adji B. Dieng, Francisco J. R. Ruiz, and David M. Blei. (Arxiv link: https://arxiv.org/abs/1907.04907)
 
 ETM defines words and topics in the same embedding space. The likelihood of a word under ETM is a Categorical whose natural parameter is given by the dot product between the word embedding and its assigned topic's embedding. ETM is a document model that learns interpretable topics and word embeddings and is robust to large vocabularies that include rare words and stop words.
 
 ## Dependencies
 
-+ python 3.6.7
-+ pytorch 1.1.0
++ python 3.7
++ tested with pytorch 1.6 and 1.7
 
 ## Datasets
 

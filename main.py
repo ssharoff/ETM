@@ -14,7 +14,7 @@ import os
 import math 
 import random 
 import sys
-import matplotlib.pyplot as plt 
+# import matplotlib.pyplot as plt 
 import data
 import scipy.io
 
@@ -55,6 +55,7 @@ parser.add_argument('--nonmono', type=int, default=10, help='number of bad hits 
 parser.add_argument('--wdecay', type=float, default=1.2e-6, help='some l2 regularization')
 parser.add_argument('--anneal_lr', type=int, default=0, help='whether to anneal the learning rate or not')
 parser.add_argument('--bow_norm', type=int, default=1, help='normalize the bows or not')
+parser.add_argument('--cpu', default=False, action='store_true', help='whether to force using cpu')
 
 ### evaluation, visualization, and logging-related arguments
 parser.add_argument('--num_words', type=int, default=20, help='number of words for topic viz')
@@ -71,14 +72,16 @@ parser.add_argument('-v', '--verbosity', type=int, default=1)
 
 args = parser.parse_args()
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() and not args.cpu else "cpu")
 
-print('\n')
+print(device)
+
+outfile=open(args.output,'w') if (len(args.output)>0 and not args.output=='-') else sys.stdout
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 if torch.cuda.is_available():
     torch.cuda.manual_seed(args.seed)
-outfile=open(args.output,'w') if (len(args.output)>0 and not args.output=='-') else sys.stdout
+
 if args.mode == 'apply':
     vocab=pickle.load(open(args.dictionary,'rb'))
     vocab_size = len(vocab)
@@ -117,7 +120,7 @@ else:
 
 xtime=int(time.time())
 if args.verbosity>0:
-    print('Loaded data in {} secs'.format(xtime-starttime), file=sys.stderr)
+    print('Loaded data in {} secs'.format(xtime-starttime))
 embeddings = None
 if not args.train_embeddings:
     emb_path = args.emb_path
@@ -143,7 +146,7 @@ if not args.train_embeddings:
 
 xtime=int(time.time())
 if args.verbosity>0:
-    print('Loaded data and embeddings in {} secs'.format(xtime-starttime), file=sys.stderr)
+    print('Loaded data and embeddings in {} secs'.format(xtime-starttime))
 
 print('=*'*100)
 print('Training an Embedded Topic Model on {} with the following settings: {}'.format(args.dataset.upper(), args))
@@ -344,12 +347,12 @@ if args.mode == 'train':
             visualize(model)
         all_val_ppls.append(val_ppl)
     with open(ckpt, 'rb') as f:
-        model = torch.load(f)
+        model = torch.load(f,map_location=torch.device(device))
     model = model.to(device)
     val_ppl = evaluate(model, 'val')
 elif args.mode=='eval':   
     with open(ckpt, 'rb') as f:
-        model = torch.load(f)
+        model = torch.load(f,map_location=torch.device(device))
     model = model.to(device)
     model.eval()
 
@@ -405,7 +408,7 @@ elif args.mode=='eval':
             print('\n',file=outfile)
 elif args.mode=='apply':
     with open(ckpt, 'rb') as f:
-        model = torch.load(f)
+        model = torch.load(f,map_location=torch.device(device))
     model = model.to(device)
     model.eval()
 
@@ -430,23 +433,22 @@ elif args.mode=='apply':
             for doc in range(theta.shape[0]): # for each document in the batch
                 besttopics = thetabest[doc,-3:].tolist()
                 bestvalues = theta[doc,besttopics].tolist()
-                lastv=1.0
+                lastv=2.0
                 out=[]
                 for t, v in zip(reversed(besttopics),reversed(bestvalues)):
                     try: # to handle occasional NaNs
                         outtuple=(float(int(v*1000))/1000,t)
-                    except:
-                        v=0.0
-                        outtuple=(v,t)
-                    if args.threshold>0: 
-                        if v/lastv>args.threshold: # Outputting only the most significant topics
+                        if args.threshold>0: 
+                            if (lastv>1) or (v/lastv>args.threshold): # Outputting only the most significant topics
+                                out.append(outtuple)
+                                lastv=v
+                            else:
+                                break
+                        else: # or everything
                             out.append(outtuple)
-                            v=lastv
-                        else:
-                            break
-                    else: # or everything
-                        out.append(outtuple)
-                print(out,file=outfile)
+                        print(out,file=outfile)
+                    except:
+                        break
             thetaAvg += theta.sum(0).unsqueeze(0) / args.num_docs_train
             weighed_theta = sums * theta
             thetaWeightedAvg += weighed_theta.sum(0).unsqueeze(0)

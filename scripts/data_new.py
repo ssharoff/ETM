@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 
-# An extension from https://github.com/adjidieng/ETM
+# Serge Sharoff, University of Leeds. An extension from https://github.com/adjidieng/ETM
 # Modifications concern the possibility to choose the parameters and to encode new datasets using the same vocabulary
+# It does read the entire corpus into memory for efficient conversion to the BoW representation.
+# For a large (20GW) corpus this ends up with consuming 70G for a short period of time
+
+import time
+starttime=int(time.time())
 
 import argparse
 import pickle
@@ -13,7 +18,6 @@ from smart_open import open
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 from scipy import sparse
-# import itertools
 from scipy.io import savemat, loadmat
 
 # helper functions
@@ -42,8 +46,9 @@ def split_bow(bow_in, n_docs):
 parser = argparse.ArgumentParser(description='The Embedded Topic Model')
 
 ### data and file related arguments
-parser.add_argument('-c', '--corpusfile', type=str, help='corpus file dname')
+parser.add_argument('-c', '--corpusfile', type=str, help='corpus file name')
 parser.add_argument('-d', '--dictionary', type=str, help='existing dictionary file')
+parser.add_argument('-s', '--save_path', type=str, help='directory to save BoW corpus')
 parser.add_argument('-s', '--stops', type=str, default='stops.txt', help='stop words file')
 parser.add_argument('-m', '--min_df', type=float, default=200, help='ignore terms that have a document frequency or percentage lower than')
 parser.add_argument('-x', '--max_df', type=float, default=0.7, help='ignore terms that have a document frequency or percentage higher than')
@@ -53,16 +58,20 @@ parser.add_argument('-v', '--verbosity', type=int, default=1)
 args = parser.parse_args()
 
 assert os.path.isfile(args.corpusfile), 'Corpus file {} does not exist'.format(args.corpusfile)
-assert os.path.isfile(args.stops), 'Stop file {} does not exist'.format(args.stops)
 if args.dictionary:
     assert os.path.isfile(args.dictionary), 'Dictionary file {} does not exist'.format(args.dictionary)
-path_save = args.corpusfile + str(args.min_df) + '/'
+else:
+    assert os.path.isfile(args.stops), 'Stop file {} does not exist'.format(args.stops)
+
+path_save = args.save_path if args.save_path else args.corpusfile + str(args.min_df) + '/'
 
 # Read data
 with open(args.corpusfile, 'r') as f:
     docs = f.readlines()
 if args.verbosity>0:
-    print('Read text file from {} with {} docs'.format(args.corpusfile,len(docs)), file=sys.stderr)
+    xtime=int(time.time())
+    print('Read text file from {} with {} docs'.format(args.corpusfile,len(docs)))
+    print('Loaded data in {} secs'.format(xtime-starttime))
 
 if not os.path.isdir(path_save):
     os.system('mkdir -p ' + path_save)
@@ -102,12 +111,14 @@ else:
     del cvectorizer
     if args.verbosity>0:
         print('  initial vocabulary size: {}'.format(v_size))
+        ytime=int(time.time())
+        print('Initial vocabulary built in {} secs'.format(ytime-xtime))
 
     # Sort elements in vocabulary
     idx_sort = np.argsort(sum_counts_np)
+    vocab_aux = [id2word[idx_sort[cc]] for cc in range(v_size)]
     if args.verbosity>0:
         print('  vocabulary size before removing stopwords from list: {}'.format(len(vocab_aux)), file=sys.stderr)
-    vocab_aux = [id2word[idx_sort[cc]] for cc in range(v_size)]
 
     # Filter out stopwords (if any)
     vocab_aux = [w for w in vocab_aux if w not in stops]
@@ -210,6 +221,9 @@ else:
     bow_ts_h1 = create_bow(doc_indices_ts_h1, words_ts_h1, n_docs_ts_h1, len(vocab))
     bow_ts_h2 = create_bow(doc_indices_ts_h2, words_ts_h2, n_docs_ts_h2, len(vocab))
     bow_va = create_bow(doc_indices_va, words_va, n_docs_va, len(vocab))
+    if args.verbosity>0:
+        ztime=int(time.time())
+        print('Bow created in {} secs'.format(ztime-ytime))
 
     del words_tr
     del words_ts
@@ -238,6 +252,13 @@ else:
     del bow_tr_tokens
     del bow_tr_counts
 
+    bow_va_tokens, bow_va_counts = split_bow(bow_va, n_docs_va)
+    savemat(path_save + 'bow_va_tokens.mat', {'tokens': bow_va_tokens}, do_compression=True)
+    savemat(path_save + 'bow_va_counts.mat', {'counts': bow_va_counts}, do_compression=True)
+    del bow_va
+    del bow_va_tokens
+    del bow_va_counts
+
     bow_ts_tokens, bow_ts_counts = split_bow(bow_ts, n_docs_ts)
     savemat(path_save + 'bow_ts_tokens.mat', {'tokens': bow_ts_tokens}, do_compression=True)
     savemat(path_save + 'bow_ts_counts.mat', {'counts': bow_ts_counts}, do_compression=True)
@@ -259,14 +280,9 @@ else:
     del bow_ts_h2_tokens
     del bow_ts_h2_counts
 
-    bow_va_tokens, bow_va_counts = split_bow(bow_va, n_docs_va)
-    savemat(path_save + 'bow_va_tokens.mat', {'tokens': bow_va_tokens}, do_compression=True)
-    savemat(path_save + 'bow_va_counts.mat', {'counts': bow_va_counts}, do_compression=True)
-    del bow_va
-    del bow_va_tokens
-    del bow_va_counts
-
 if args.verbosity>0:
     print('Data ready !!')
+    ztime=int(time.time())
+    print('All completed in {} secs'.format(ztime-starttime))
     print('*************')
 
