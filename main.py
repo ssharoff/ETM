@@ -217,7 +217,7 @@ def train(epoch):
             cur_real_loss = round(cur_loss + cur_kl_theta, 2)
 
             print('Epoch: {} .. batch: {}/{} .. LR: {} .. KL_theta: {} .. Rec_loss: {} .. NELBO: {}'.format(
-                epoch, idx, len(indices), optimizer.param_groups[0]['lr'], cur_kl_theta, cur_loss, cur_real_loss),file=outfile)
+                epoch, idx, len(indices), optimizer.param_groups[0]['lr'], cur_kl_theta, cur_loss, cur_real_loss),file=sys.stderr)
     
     cur_loss = round(acc_loss / cnt, 2) 
     cur_kl_theta = round(acc_kl_theta_loss / cnt, 2) 
@@ -378,7 +378,7 @@ elif args.mode=='eval':
                 weighed_theta = sums * theta
                 thetaWeightedAvg += weighed_theta.sum(0).unsqueeze(0)
                 if idx % 100 == 0 and idx > 0:
-                    print('batch: {}/{}'.format(idx, len(indices)),file=outfile)
+                    print('batch: {}/{}'.format(idx, len(indices)),file=sys.stderr)
             thetaWeightedAvg = thetaWeightedAvg.squeeze().cpu().numpy() / cnt
             print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]))
 
@@ -445,9 +445,9 @@ elif args.mode=='apply':
                                 break
                         else: # or everything
                             out.append(outtuple)
-                        print(out,file=outfile)
                     except:
                         break
+                print(out,file=outfile)
             thetaAvg += theta.sum(0).unsqueeze(0) / args.num_docs_train
             weighed_theta = sums * theta
             thetaWeightedAvg += weighed_theta.sum(0).unsqueeze(0)
