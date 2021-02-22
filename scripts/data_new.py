@@ -90,6 +90,9 @@ if args.dictionary:
     n_docs_ts = len(docs_ts)
     bow_ts = create_bow(doc_indices_ts, words_ts, n_docs_ts, len(vocab))
     bow_ts_tokens, bow_ts_counts = split_bow(bow_ts, n_docs_ts)
+    if args.verbosity>0:
+        ztime=int(time.time())
+        print('Bow created in {} secs'.format(ztime-xtime))
     savemat(path_save + 'bow_ts_tokens.mat', {'tokens': bow_ts_tokens}, do_compression=True)
     savemat(path_save + 'bow_ts_counts.mat', {'counts': bow_ts_counts}, do_compression=True)
 

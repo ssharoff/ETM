@@ -34,17 +34,17 @@ parser.add_argument('--batch_size', type=int, default=1000, help='input batch si
 parser.add_argument('-d', '--dictionary', type=str, help='existing dictionary file')
 
 ### model-related arguments
-parser.add_argument('-n', '--num_topics', type=int, default=100, help='number of topics')
+parser.add_argument('-K', '--num_topics', type=int, default=100, help='number of topics')
 parser.add_argument('--rho_size', type=int, default=300, help='dimension of rho')
 parser.add_argument('--emb_size', type=int, default=300, help='dimension of embeddings')
 parser.add_argument('--t_hidden_size', type=int, default=800, help='dimension of hidden space of q(theta)')
 parser.add_argument('--theta_act', type=str, default='relu', help='tanh, softplus, relu, rrelu, leakyrelu, elu, selu, glu)')
-parser.add_argument('-e', '--train_embeddings', type=int, default=1, help='whether to fix rho or train it')
+parser.add_argument('--train_embeddings', type=int, default=1, help='whether to fix rho or train it')
 
 ### optimization-related arguments
 parser.add_argument('--lr', type=float, default=0.005, help='learning rate')
 parser.add_argument('--lr_factor', type=float, default=4.0, help='divide learning rate by this...')
-parser.add_argument('--epochs', type=int, default=20, help='number of epochs to train...150 for 20ng 100 for others')
+parser.add_argument('-e', '--epochs', type=int, default=20, help='number of epochs to train...150 for 20ng 100 for others')
 parser.add_argument('--mode', type=str, default='train', help='train, eval or apply model')
 parser.add_argument('--optimizer', type=str, default='adam', help='choice of optimizer')
 parser.add_argument('--seed', type=int, default=42, help='random seed')
@@ -61,7 +61,7 @@ parser.add_argument('--num_words', type=int, default=20, help='number of words f
 parser.add_argument('--log_interval', type=int, default=200, help='when to log training')
 parser.add_argument('--visualize_every', type=int, default=10, help='when to visualize results')
 parser.add_argument('--eval_batch_size', type=int, default=1000, help='input batch size for evaluation')
-parser.add_argument('--load_from', type=str, default='', help='the name of the ckpt to eval from')
+parser.add_argument('-l', '--load_from', type=str, default='', help='the name of the ckpt to eval from')
 parser.add_argument('--output', type=str, default='', help='the name of the output file')
 parser.add_argument('--tc', default=False, action='store_true', help='whether to compute topic coherence')
 parser.add_argument('--td', default=False, action='store_true', help='whether to compute topic diversity')
@@ -313,11 +313,17 @@ def evaluate(m, source, tc=False, td=False):
         if tc or td:
             beta = beta.data.cpu().numpy()
             if tc:
-                print('Computing topic coherence...',file=outfile)
+                print('Computing topic coherence...')
                 get_topic_coherence(beta, train_tokens, vocab)
+            outfile.flush()
+            os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
+            os.fsync(sys.stderr.fileno()) 
             if td:
                 print('Computing topic diversity...')
                 get_topic_diversity(beta, 25)
+            outfile.flush()
+            os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
+            os.fsync(sys.stderr.fileno()) 
         return ppl_dc
 
 if args.mode == 'train':
@@ -345,6 +351,9 @@ if args.mode == 'train':
         if epoch % args.visualize_every == 0:
             visualize(model)
         all_val_ppls.append(val_ppl)
+        outfile.flush()
+        os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
+        os.fsync(sys.stderr.fileno()) 
     with open(ckpt, 'rb') as f:
         model = torch.load(f,map_location=torch.device(device))
     model = model.to(device)
@@ -380,7 +389,10 @@ elif args.mode=='eval':
                 if idx % 100 == 0 and idx > 0:
                     print('batch: {}/{}'.format(idx, len(indices)),file=sys.stderr)
             thetaWeightedAvg = thetaWeightedAvg.squeeze().cpu().numpy() / cnt
-            print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]))
+            print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]), file=outfile)
+        outfile.flush()
+        os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
+        os.fsync(sys.stderr.fileno()) 
 
         ## show topics
         beta = model.get_beta()
