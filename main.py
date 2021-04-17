@@ -63,11 +63,14 @@ parser.add_argument('--visualize_every', type=int, default=10, help='when to vis
 parser.add_argument('--eval_batch_size', type=int, default=1000, help='input batch size for evaluation')
 parser.add_argument('-l', '--load_from', type=str, default='', help='the name of the ckpt to eval from')
 parser.add_argument('--output', type=str, default='', help='the name of the output file')
+parser.add_argument('--queries', type=str, default='', help='space-separated words to visualise embeddings')
 parser.add_argument('--tc', default=False, action='store_true', help='whether to compute topic coherence')
 parser.add_argument('--td', default=False, action='store_true', help='whether to compute topic diversity')
 parser.add_argument('--tp', default=False, action='store_true', help='whether to compute topic proportions')
 parser.add_argument('--threshold', type=float, default=0.5, help='threshold for including less significant topics into predictions')
 parser.add_argument('-v', '--verbosity', type=int, default=1)
+parser.add_argument('-k', '--topK', type=int, default=3, help='number of topics for predictions')
+
 
 args = parser.parse_args()
 
@@ -80,6 +83,7 @@ np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 if torch.cuda.is_available():
     torch.cuda.manual_seed(args.seed)
+queries = args.queries.split()
 
 if args.mode == 'apply':
     vocab=pickle.load(open(args.dictionary,'rb'))
@@ -233,9 +237,6 @@ def visualize(m, show_emb=True):
 
     m.eval()
 
-    queries = ['andrew', 'computer', 'sports', 'religion', 'man', 'love', 
-                'intelligence', 'money', 'politics', 'health', 'people', 'family']
-
     ## visualize topics using monte carlo
     with torch.no_grad():
         print('#'*100)
@@ -312,18 +313,13 @@ def evaluate(m, source, tc=False, td=False):
         print('*'*100,file=outfile)
         if tc or td:
             beta = beta.data.cpu().numpy()
-            if tc:
-                print('Computing topic coherence...')
-                get_topic_coherence(beta, train_tokens, vocab)
-            outfile.flush()
-            os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
-            os.fsync(sys.stderr.fileno()) 
             if td:
-                print('Computing topic diversity...')
-                get_topic_diversity(beta, 25)
-            outfile.flush()
-            os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
-            os.fsync(sys.stderr.fileno()) 
+                print('topic diversity is: {}'.format(get_topic_diversity(beta, 25)), file=outfile)
+                outfile.flush()
+                os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
+                # os.fsync(sys.stderr.fileno()) 
+            if tc:
+                print('Topic coherence is: {}'.format(get_topic_coherence(beta, train_tokens, vocab)), file=outfile)
         return ppl_dc
 
 if args.mode == 'train':
@@ -353,7 +349,7 @@ if args.mode == 'train':
         all_val_ppls.append(val_ppl)
         outfile.flush()
         os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
-        os.fsync(sys.stderr.fileno()) 
+        # os.fsync(sys.stderr.fileno()) 
     with open(ckpt, 'rb') as f:
         model = torch.load(f,map_location=torch.device(device))
     model = model.to(device)
@@ -392,7 +388,7 @@ elif args.mode=='eval':
             print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]), file=outfile)
         outfile.flush()
         os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
-        os.fsync(sys.stderr.fileno()) 
+        # os.fsync(sys.stderr.fileno()) 
 
         ## show topics
         beta = model.get_beta()
@@ -410,8 +406,6 @@ elif args.mode=='eval':
                 rho_etm = model.rho.weight.cpu()
             except:
                 rho_etm = model.rho.cpu()
-            queries = ['andrew', 'woman', 'computer', 'sports', 'religion', 'man', 'love', 
-                            'intelligence', 'money', 'politics', 'health', 'people', 'family']
             print('\n',file=outfile)
             print('ETM embeddings...',file=outfile)
             for word in queries:
@@ -442,7 +436,7 @@ elif args.mode=='apply':
             theta, _ = model.get_theta(normalized_data_batch)
             thetabest = theta.argsort()
             for doc in range(theta.shape[0]): # for each document in the batch
-                besttopics = thetabest[doc,-3:].tolist()
+                besttopics = thetabest[doc,-args.topK:].tolist()
                 bestvalues = theta[doc,besttopics].tolist()
                 lastv=2.0
                 out=[]

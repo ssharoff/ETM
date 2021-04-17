@@ -9,7 +9,7 @@ def get_topic_diversity(beta, topk):
         list_w[k,:] = idx
     n_unique = len(np.unique(list_w))
     TD = n_unique / (topk * num_topics)
-    print('Topic diversity is: {}'.format(TD))
+    return TD
 
 def get_document_frequency(data, wi, wj=None):
     if wj is None:
@@ -68,24 +68,24 @@ def get_topic_coherence(beta, data, vocab):
             # update TC_k
             TC_k += tmp 
         TC.append(TC_k)
-    print('counter: ', counter)
-    print('num topics: ', len(TC))
     TC = np.mean(TC) / counter
-    print('Topic coherence is: {}'.format(TC))
+    return TC
 
 def nearest_neighbors(word, embeddings, vocab):
-    vectors = embeddings.data.cpu().numpy() 
-    index = vocab.index(word)
-    print('vectors: ', vectors.shape)
-    query = vectors[index]
-    print('query: ', query.shape)
-    ranks = vectors.dot(query).squeeze()
-    denom = query.T.dot(query).squeeze()
-    denom = denom * np.sum(vectors**2, 1)
-    denom = np.sqrt(denom)
-    ranks = ranks / denom
-    mostSimilar = []
-    [mostSimilar.append(idx) for idx in ranks.argsort()[::-1]]
-    nearest_neighbors = mostSimilar[:20]
-    nearest_neighbors = [vocab[comp] for comp in nearest_neighbors]
+    vectors = embeddings.data.cpu().numpy()
+    nearest_neighbors=[]
+    if word in vocab:
+        index = vocab.index(word)
+        # print('vectors: ', vectors.shape)
+        query = vectors[index]
+        # print('query: ', query.shape)
+        ranks = vectors.dot(query).squeeze()
+        denom = query.T.dot(query).squeeze()
+        denom = denom * np.sum(vectors**2, 1)
+        denom = np.sqrt(denom)
+        ranks = ranks / denom
+        mostSimilar = []
+        [mostSimilar.append(idx) for idx in ranks.argsort()[::-1]]
+        nearest_neighbors = mostSimilar[:20]
+        nearest_neighbors = [vocab[comp] for comp in nearest_neighbors]
     return nearest_neighbors

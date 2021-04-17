@@ -84,6 +84,15 @@ if args.dictionary:
     tsSize = len(docs)
     # docs_ts consists of ids of words in vocab
     docs_ts = [[word2id[w] for w in docs[idx_d].split() if w in word2id] for idx_d in range(tsSize)]
+    if args.verbosity>1: # for testing how doc indices align with the line count in .ol
+        k = 30
+        rr = [0] + sorted(random.sample(range(len(docs)), k))
+        print(rr)
+        for i in rr:
+            doc = docs[i]
+            doc_ts = ' '.join([id2word[id] for id in docs_ts[i]])
+            print(str(i+1)+'\t'+doc[:100]+'\t'+doc_ts[:100])
+
     del docs
     words_ts = create_list_words(docs_ts)
     doc_indices_ts = create_doc_indices(docs_ts)
