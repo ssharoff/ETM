@@ -316,7 +316,7 @@ def evaluate(m, source, tc=False, td=False):
             if td:
                 print('topic diversity is: {}'.format(get_topic_diversity(beta, 25)), file=outfile)
                 outfile.flush()
-                os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
+                # os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
                 # os.fsync(sys.stderr.fileno()) 
             if tc:
                 print('Topic coherence is: {}'.format(get_topic_coherence(beta, train_tokens, vocab)), file=outfile)
@@ -348,7 +348,7 @@ if args.mode == 'train':
             visualize(model)
         all_val_ppls.append(val_ppl)
         outfile.flush()
-        os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
+        # os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
         # os.fsync(sys.stderr.fileno()) 
     with open(ckpt, 'rb') as f:
         model = torch.load(f,map_location=torch.device(device))
@@ -385,9 +385,15 @@ elif args.mode=='eval':
                 if idx % 100 == 0 and idx > 0:
                     print('batch: {}/{}'.format(idx, len(indices)),file=sys.stderr)
             thetaWeightedAvg = thetaWeightedAvg.squeeze().cpu().numpy() / cnt
-            print('\nThe 10 most used topics are {}'.format(thetaWeightedAvg.argsort()[::-1][:10]), file=outfile)
+            toptopics=thetaWeightedAvg.argsort()[::-1][:10]
+            print('\nThe 10 most used topics are {}'.format(toptopics), file=outfile)
+            for k in toptopics:
+                gamma = beta[k]
+                top_words = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
+                print('Topic {}: {}'.format(k, top_words),file=outfile)
+                
         outfile.flush()
-        os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
+        # os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
         # os.fsync(sys.stderr.fileno()) 
 
         ## show topics
@@ -397,7 +403,7 @@ elif args.mode=='eval':
         for k in range(args.num_topics):#topic_indices:
             gamma = beta[k]
             top_words = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
-            topic_words = [vocab[a] for a in top_words]
+            topic_words = [(vocab[a],float(gamma[a])) for a in top_words]
             print('Topic {}: {}'.format(k, topic_words),file=outfile)
 
         if args.train_embeddings:
