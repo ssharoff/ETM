@@ -57,7 +57,7 @@ parser.add_argument('--bow_norm', type=int, default=1, help='normalize the bows 
 parser.add_argument('--cpu', default=False, action='store_true', help='whether to force using cpu')
 
 ### evaluation, visualization, and logging-related arguments
-parser.add_argument('--num_words', type=int, default=20, help='number of words for topic viz')
+parser.add_argument('-k', '--num_words', type=int, default=20, help='number of words for topic viz')
 parser.add_argument('--log_interval', type=int, default=200, help='when to log training')
 parser.add_argument('--visualize_every', type=int, default=10, help='when to visualize results')
 parser.add_argument('--eval_batch_size', type=int, default=1000, help='input batch size for evaluation')
@@ -69,7 +69,7 @@ parser.add_argument('--td', default=False, action='store_true', help='whether to
 parser.add_argument('--tp', default=False, action='store_true', help='whether to compute topic proportions')
 parser.add_argument('--threshold', type=float, default=0.5, help='threshold for including less significant topics into predictions')
 parser.add_argument('-v', '--verbosity', type=int, default=1)
-parser.add_argument('-k', '--topK', type=int, default=3, help='number of topics for predictions')
+parser.add_argument('--topK', type=int, default=3, help='number of topics for predictions')
 
 
 args = parser.parse_args()
@@ -363,6 +363,7 @@ elif args.mode=='eval':
     with torch.no_grad():
         ## get document completion perplexities
         test_ppl = evaluate(model, 'test', tc=args.tc, td=args.td)
+        beta = model.get_beta()
 
         if args.tp: ## get most used topics
             indices = torch.tensor(range(args.num_docs_train))
@@ -390,18 +391,16 @@ elif args.mode=='eval':
             for k in toptopics:
                 gamma = beta[k]
                 top_word_ids = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
-                topic_words = [vocab[a] for a in top_words_ids]
-                print('Topic {}: {}'.format(k, top_words),file=outfile)
+                topic_words = [vocab[a] for a in top_word_ids]
+                print('Topic {}: {}'.format(k, topic_words),file=outfile)
 
         outfile.flush()
         # os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
         # os.fsync(sys.stderr.fileno()) 
 
-        ## show topics
-        beta = model.get_beta()
-        topic_indices = list(np.random.choice(args.num_topics, 10)) # 10 random topics
+        ## show full topics
         print('\n',file=outfile)
-        for k in range(args.num_topics):#topic_indices:
+        for k in range(args.num_topics):
             gamma = beta[k]
             top_word_ids = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
             topic_words = [(vocab[a],float(gamma[a])) for a in top_word_ids]
