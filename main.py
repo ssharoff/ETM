@@ -389,9 +389,10 @@ elif args.mode=='eval':
             print('\nThe 10 most used topics are {}'.format(toptopics), file=outfile)
             for k in toptopics:
                 gamma = beta[k]
-                top_words = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
+                top_word_ids = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
+                topic_words = [vocab[a] for a in top_words_ids]
                 print('Topic {}: {}'.format(k, top_words),file=outfile)
-                
+
         outfile.flush()
         # os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
         # os.fsync(sys.stderr.fileno()) 
@@ -402,8 +403,8 @@ elif args.mode=='eval':
         print('\n',file=outfile)
         for k in range(args.num_topics):#topic_indices:
             gamma = beta[k]
-            top_words = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
-            topic_words = [(vocab[a],float(gamma[a])) for a in top_words]
+            top_word_ids = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
+            topic_words = [(vocab[a],float(gamma[a])) for a in top_word_ids]
             print('Topic {}: {}'.format(k, topic_words),file=outfile)
 
         if args.train_embeddings:

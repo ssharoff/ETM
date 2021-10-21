@@ -47,11 +47,11 @@ parser = argparse.ArgumentParser(description='The Embedded Topic Model')
 
 ### data and file related arguments
 parser.add_argument('-c', '--corpusfile', type=str, help='corpus file name')
-parser.add_argument('-d', '--dictionary', type=str, help='existing dictionary file')
+parser.add_argument('-d', '--dictionary', type=str, help='Use an existing dictionary')
 parser.add_argument('-s', '--save_path', type=str, help='directory to save BoW corpus')
-parser.add_argument('-o', '--stops', type=str, default='stops.txt', help='stop words file')
-parser.add_argument('-m', '--min_df', type=float, default=200, help='ignore terms that have a document frequency or percentage lower than')
-parser.add_argument('-x', '--max_df', type=float, default=0.7, help='ignore terms that have a document frequency or percentage higher than')
+parser.add_argument('-o', '--stop_words', type=str, default='stop-en.txt', help='stop words file')
+parser.add_argument('-m', '--min_df', type=float, default=200, help='Ignore terms that have a document frequency or percentage lower than')
+parser.add_argument('-x', '--max_df', type=float, default=0.7, help='Ignore terms that have a document frequency or percentage higher than')
 
 parser.add_argument('-v', '--verbosity', type=int, default=1)
 
