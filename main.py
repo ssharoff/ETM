@@ -341,6 +341,8 @@ if args.mode == 'train':
                 torch.save(model, f)
             best_epoch = epoch
             best_val_ppl = val_ppl
+            best_kl_theta = kl_theta
+            best_nelbo = nelbo
         else:
             ## check whether to anneal lr
             lr = optimizer.param_groups[0]['lr']
