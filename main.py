@@ -39,6 +39,7 @@ parser.add_argument('--rho_size', type=int, default=300, help='dimension of rho'
 parser.add_argument('--emb_size', type=int, default=300, help='dimension of embeddings')
 parser.add_argument('--t_hidden_size', type=int, default=800, help='dimension of hidden space of q(theta)')
 parser.add_argument('--theta_act', type=str, default='relu', help='tanh, softplus, relu, rrelu, leakyrelu, elu, selu, glu)')
+parser.add_argument('--best', type=str, default='val_ppl', help='Saving the model for the best: val_ppl, kl_theta, nelbo)')
 parser.add_argument('--train_embeddings', type=int, default=1, help='whether to fix rho or train it')
 
 ### optimization-related arguments
@@ -163,9 +164,7 @@ if args.mode in ['eval', 'apply']:
     ckpt = args.load_from
 else:
     ckpt = os.path.join(args.save_path, 
-        'etm_{}_K_{}_Htheta_{}_Optim_{}_Clip_{}_ThetaAct_{}_Lr_{}_Bsz_{}_RhoSize_{}_trainEmbeddings_{}'.format(
-        args.dataset, args.num_topics, args.t_hidden_size, args.optimizer, args.clip, args.theta_act, 
-            args.lr, args.batch_size, args.rho_size, args.train_embeddings))
+        f'etm_{args.dataset}_K_{args.num_topics}_Htheta_{args.t_hidden_size}_Optim_{args.optimizer}_Clip_{args.clip}_ThetaAct_{args.theta_act}_Lr_{args.lr}_Batch_{args.batch_size}_RhoSize_{args.rho_size}')
 
 ## define model and optimizer
 model = ETM(args.num_topics, vocab_size, args.t_hidden_size, args.rho_size, args.emb_size, 
@@ -230,6 +229,7 @@ def train(epoch):
     print('Epoch----->{} .. LR: {} .. KL_theta: {} .. Rec_loss: {} .. NELBO: {}'.format(
             epoch, optimizer.param_groups[0]['lr'], cur_kl_theta, cur_loss, cur_real_loss),file=outfile)
     print('*'*100,file=outfile)
+    return cur_kl_theta, cur_real_loss
 
 def visualize(m, show_emb=True):
     if not os.path.exists('./results'):
@@ -326,15 +326,17 @@ if args.mode == 'train':
     ## train model on data 
     best_epoch = 0
     best_val_ppl = 1e9
+    best_kl_theta = 0
+    best_nelbo = 1e9
     all_val_ppls = []
     print('\n',file=outfile)
     print('Visualizing model quality before training...',file=outfile)
     visualize(model)
     print('\n',file=outfile)
     for epoch in range(1, args.epochs):
-        train(epoch)
+        kl_theta,nelbo=train(epoch)
         val_ppl = evaluate(model, 'val')
-        if val_ppl < best_val_ppl:
+        if (args.best=='val_ppl' and val_ppl < best_val_ppl) or (args.best=='kl_theta' and kl_theta > best_kl_theta) or (args.best=='nelbo' and nelbo < best_nelbo):
             with open(ckpt, 'wb') as f:
                 torch.save(model, f)
             best_epoch = epoch
