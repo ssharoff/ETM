@@ -24,17 +24,18 @@ from etm import ETM
 from utils import nearest_neighbors, get_topic_coherence, get_topic_diversity
 
 parser = argparse.ArgumentParser(description='The Embedded Topic Model')
+parser.add_argument('--mode', type=str, default='train', help='train, eval or apply model')
 
 ### data and file related arguments
 parser.add_argument('--dataset', type=str, default='20ng', help='name of corpus')
 parser.add_argument('--data_path', type=str, default='data/20ng', help='directory containing data')
-parser.add_argument('--emb_path', type=str, default='data/20ng_embeddings.txt', help='directory containing word embeddings')
+parser.add_argument('--emb_path', type=str, default='data/20ng_embeddings.txt', help='file containing word embeddings')
 parser.add_argument('--save_path', type=str, default='./results', help='path to save results')
-parser.add_argument('--batch_size', type=int, default=1000, help='input batch size for training')
+parser.add_argument('-o', '--output', type=str, default='', help='the name of the output file')
 parser.add_argument('-d', '--dictionary', type=str, help='existing dictionary file')
 
 ### model-related arguments
-parser.add_argument('-K', '--num_topics', type=int, default=100, help='number of topics')
+parser.add_argument('-K', '--num_topics', type=int, default=0, help='number of topics')
 parser.add_argument('--rho_size', type=int, default=300, help='dimension of rho')
 parser.add_argument('--emb_size', type=int, default=300, help='dimension of embeddings')
 parser.add_argument('--t_hidden_size', type=int, default=800, help='dimension of hidden space of q(theta)')
@@ -43,10 +44,10 @@ parser.add_argument('--best', type=str, default='val_ppl', help='Saving the mode
 parser.add_argument('--train_embeddings', type=int, default=1, help='whether to fix rho or train it')
 
 ### optimization-related arguments
+parser.add_argument('--batch_size', type=int, default=1000, help='input batch size for training')
 parser.add_argument('--lr', type=float, default=0.005, help='learning rate')
 parser.add_argument('--lr_factor', type=float, default=4.0, help='divide learning rate by this...')
 parser.add_argument('-e', '--epochs', type=int, default=20, help='number of epochs to train...150 for 20ng 100 for others')
-parser.add_argument('--mode', type=str, default='train', help='train, eval or apply model')
 parser.add_argument('--optimizer', type=str, default='adam', help='choice of optimizer')
 parser.add_argument('--seed', type=int, default=42, help='random seed')
 parser.add_argument('--enc_drop', type=float, default=0.0, help='dropout rate on encoder')
@@ -59,18 +60,18 @@ parser.add_argument('--cpu', default=False, action='store_true', help='whether t
 
 ### evaluation, visualization, and logging-related arguments
 parser.add_argument('-k', '--num_words', type=int, default=20, help='number of words for topic viz')
+parser.add_argument('--toptopicsnum', type=int, default=20, help='number of top topics for evaluation')
 parser.add_argument('--log_interval', type=int, default=200, help='when to log training')
 parser.add_argument('--visualize_every', type=int, default=10, help='when to visualize results')
 parser.add_argument('--eval_batch_size', type=int, default=1000, help='input batch size for evaluation')
 parser.add_argument('-l', '--load_from', type=str, default='', help='the name of the ckpt to eval from')
-parser.add_argument('--output', type=str, default='', help='the name of the output file')
 parser.add_argument('--queries', type=str, default='', help='space-separated words to visualise embeddings')
 parser.add_argument('--tc', default=False, action='store_true', help='whether to compute topic coherence')
 parser.add_argument('--td', default=False, action='store_true', help='whether to compute topic diversity')
 parser.add_argument('--tp', default=False, action='store_true', help='whether to compute topic proportions')
 parser.add_argument('--threshold', type=float, default=0.5, help='threshold for including less significant topics into predictions')
 parser.add_argument('-v', '--verbosity', type=int, default=1)
-parser.add_argument('--topK', type=int, default=3, help='number of topics for predictions')
+parser.add_argument('--topK', type=int, default=3, help='number of topics to output for predictions')
 
 
 args = parser.parse_args()
@@ -152,22 +153,21 @@ xtime=int(time.time())
 if args.verbosity>0:
     print('Loaded data and embeddings in {} secs'.format(xtime-starttime))
 
-print('=*'*100)
-print('Training an Embedded Topic Model on {} with the following settings: {}'.format(args.dataset.upper(), args))
-print('=*'*100)
-
 ## define checkpoint
 if not os.path.exists(args.save_path):
     os.makedirs(args.save_path)
 
 if args.mode in ['eval', 'apply']:
     ckpt = args.load_from
+    with open(ckpt, 'rb') as f:
+        model = torch.load(f,map_location=torch.device(device))
+    args.num_topics=model.alphas.out_features  # otherwise the dimensions are not compatible
+    model = model.to(device)
+    model.eval()
 else:
     ckpt = os.path.join(args.save_path, 
-        f'etm_{args.dataset}_K_{args.num_topics}_Htheta_{args.t_hidden_size}_Optim_{args.optimizer}_Clip_{args.clip}_ThetaAct_{args.theta_act}_Lr_{args.lr}_Batch_{args.batch_size}_RhoSize_{args.rho_size}')
-
-## define model and optimizer
-model = ETM(args.num_topics, vocab_size, args.t_hidden_size, args.rho_size, args.emb_size, 
+        f'etm_{args.dataset}_K_{args.num_topics}_Htheta_{args.t_hidden_size}_Lr_{args.lr}_RhoSize_{args.rho_size}')
+    model = ETM(args.num_topics, vocab_size, args.t_hidden_size, args.rho_size, args.emb_size, 
                 args.theta_act, embeddings, args.train_embeddings, args.enc_drop).to(device)
 
 print('model: {}'.format(model))
@@ -314,15 +314,17 @@ def evaluate(m, source, tc=False, td=False):
         if tc or td:
             beta = beta.data.cpu().numpy()
             if td:
-                print('topic diversity is: {}'.format(get_topic_diversity(beta, 25)), file=outfile)
+                print(f'topic diversity is: {get_topic_diversity(beta, 25)}', file=outfile)
                 outfile.flush()
                 # os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
                 # os.fsync(sys.stderr.fileno()) 
             if tc:
-                print('Topic coherence is: {}'.format(get_topic_coherence(beta, train_tokens, vocab)), file=outfile)
+                print(f'Topic coherence is: {get_topic_coherence(beta, train_tokens, vocab)}', file=outfile)
         return ppl_dc
 
 if args.mode == 'train':
+    print('=*'*100)
+    print(f'Training an Embedded Topic Model on {args.dataset.upper()} with the following settings: {args}')
     ## train model on data 
     best_epoch = 0
     best_val_ppl = 1e9
@@ -390,8 +392,8 @@ elif args.mode=='eval':
                 if idx % 100 == 0 and idx > 0:
                     print('batch: {}/{}'.format(idx, len(indices)),file=sys.stderr)
             thetaWeightedAvg = thetaWeightedAvg.squeeze().cpu().numpy() / cnt
-            toptopics=thetaWeightedAvg.argsort()[::-1][:10]
-            print('\nThe 10 most used topics are {}'.format(toptopics), file=outfile)
+            toptopics=thetaWeightedAvg.argsort()[::-1][:args.toptopicsnum]
+            print(f'\nThe {args.toptopicsnum} most used topics are {toptopics}', file=outfile)
             for k in toptopics:
                 gamma = beta[k]
                 top_word_ids = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
@@ -422,11 +424,6 @@ elif args.mode=='eval':
                 print('word: {} .. etm neighbors: {}'.format(word, nearest_neighbors(word, rho_etm, vocab)),file=outfile)
             print('\n',file=outfile)
 elif args.mode=='apply':
-    with open(ckpt, 'rb') as f:
-        model = torch.load(f,map_location=torch.device(device))
-    model = model.to(device)
-    model.eval()
-
     with torch.no_grad():
         beta = model.get_beta()
         ## get most used topics
