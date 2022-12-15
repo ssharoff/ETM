@@ -48,8 +48,8 @@ parser = argparse.ArgumentParser(description='The Embedded Topic Model')
 ### data and file related arguments
 parser.add_argument('-c', '--corpusfile', type=str, help='corpus file name')
 parser.add_argument('-d', '--dictionary', type=str, help='Use an existing dictionary')
-parser.add_argument('-s', '--save_path', type=str, help='directory to save BoW corpus')
-parser.add_argument('-o', '--stop_words', type=str, default='stop-en.txt', help='stop words file')
+parser.add_argument('-o', '--output', type=str, help='directory to save BoW corpus')
+parser.add_argument('-s', '--stops', type=str, default='stop-en.txt', help='stop words file')
 parser.add_argument('-m', '--min_df', type=float, default=200, help='Ignore terms that have a document frequency or percentage lower than')
 parser.add_argument('-x', '--max_df', type=float, default=0.7, help='Ignore terms that have a document frequency or percentage higher than')
 
@@ -57,21 +57,21 @@ parser.add_argument('-v', '--verbosity', type=int, default=1)
 
 args = parser.parse_args()
 
-assert os.path.isfile(args.corpusfile), 'Corpus file {} does not exist'.format(args.corpusfile)
+assert os.path.isfile(args.corpusfile), f'Corpus file {args.corpusfile} does not exist'
 if args.dictionary:
-    assert os.path.isfile(args.dictionary), 'Dictionary file {} does not exist'.format(args.dictionary)
+    assert os.path.isfile(args.dictionary), f'Dictionary file {args.dictionary} does not exist'
 else:
-    assert os.path.isfile(args.stops), 'Stop file {} does not exist'.format(args.stops)
+    assert os.path.isfile(args.stops), f'Stop file {args.stops} does not exist'
 
-path_save = args.save_path + '/' if args.save_path else args.corpusfile + str(args.min_df) + '/'
+path_save = args.output + '/' if args.output else args.corpusfile + str(args.min_df) + '/'
 
 # Read data
 with open(args.corpusfile, 'r') as f:
     docs = f.readlines()
 if args.verbosity>0:
     xtime=int(time.time())
-    print('Read text file from {} with {} docs'.format(args.corpusfile,len(docs)))
-    print('Loaded data in {} secs'.format(xtime-starttime))
+    print(f'Read text file from {args.corpusfile} with {len(docs)} docs')
+    print(f'Loaded data in {xtime-starttime} secs')
 
 if not os.path.isdir(path_save):
     os.system('mkdir -p ' + path_save)
@@ -79,7 +79,7 @@ if not os.path.isdir(path_save):
 if args.dictionary:
     vocab=pickle.load(open(args.dictionary,'rb'))
     if args.verbosity>0:
-        print('Read existing dictionary {} words'.format(len(vocab)), file=sys.stderr)
+        print(f'Read existing dictionary {len(vocab)} words')
     word2id, id2word = make_dictionary(vocab)
     tsSize = len(docs)
     # docs_ts consists of ids of words in vocab
@@ -122,9 +122,9 @@ else:
     id2word = dict([(cvectorizer.vocabulary_.get(w), w) for w in cvectorizer.vocabulary_])
     del cvectorizer
     if args.verbosity>0:
-        print('  initial vocabulary size: {}'.format(v_size))
+        print(f'  initial vocabulary size: {v_size}')
         ytime=int(time.time())
-        print('Initial vocabulary built in {} secs'.format(ytime-xtime))
+        print(f'Initial vocabulary built in {(ytime-xtime)} secs')
 
     # Sort elements in vocabulary
     idx_sort = np.argsort(sum_counts_np)
