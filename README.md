@@ -33,28 +33,30 @@ The remainder is practically the same as in the original repository (https://git
 
 This has been tried with Python 3.7 and Pytorch 1.7.1.
 
-ETM is particularly useful for estimating topic models from short texts such as those from social media. I have created this update for our project on analysis of [COVID communication](http://corpus.leeds.ac.uk/serge/covid/) where it was used to estimate the topics of COVID-related Twitter streams in our collection:
+ETM is particularly useful for estimating and interpreting topic models from short texts such as those from social media. I have created this update for our project on analysis of [COVID communication](http://corpus.leeds.ac.uk/serge/covid/) where it was used to estimate the topics of COVID-related Twitter streams in our collection:
 
-| 0 | patients, disease, infection, respiratory, study, clinical, patient, severe, treatment, symptoms, risk, acute, studies, blood, data, viral |
+| id | Keywords | 
+|------|------------|
+| 0 | patients, disease, infection, respiratory, study, clinical, patient, severe, treatment, symptoms, risk, acute, studies, blood |
 | 1 | https, corona, covid, pandemic, virus, lockdown, time, good, today, covid19, read, great, make, day, fight, world, hope, free |
-| 3 | play, game, season, year, show, time, love, playing, music, team, dropped, night, video, players, fans, tv, football, person, games |
-| 4 | uk, government, lockdown, coronavirus, people, travel, nhs, restrictions, public, johnson, week, measures, rules, health, boris, minister, england |
-| 5 | health, care, pandemic, public, medical, healthcare, risk, research, social, patients, services, disease, staff, mental, measures, patient, information |
-| 6 | mask, social, masks, distancing, face, wear, hands, hand, wearing, air, water, food, spread, wash, distance, hai, sanitizer, buy, protect |
-| 7 | home, work, stay, working, school, safe, family, children, back, schools, kids, parents, day, time, online, child, students, friends, families |
-| 9 | people, media, stop, government, don, covid, fake, wrong, science, political, pandemic, truth, blame, fear, real, fact, stupid, twitter |
-| 10 | trump, president, americans, america, white, pandemic, house, vote, police, bill, response, american, biden, election, states, donald |
-| 11 | cases, deaths, 2020, 000, total, number, death, confirmed, india, rate, coronavirus, 10, reported, million, 24, recovered, days, day, update |
-| 12 | virus, vaccine, human, influenza, transmission, diseases, vaccines, infectious, species, animals, samples, infections, study, infected, strains |
+| 3 | play, game, season, year, show, time, love, playing, music, team, dropped, night, video, players, fans, tv, football, person |
+| 4 | uk, government, lockdown, coronavirus, people, travel, nhs, restrictions, public, johnson, week, measures, rules, health, boris |
+| 5 | health, care, pandemic, public, medical, risk, research, social, patients, services, disease, mental, measures, information |
+| 6 | mask, social, distancing, face, wear, hands, hand, wearing, air, water, food, spread, wash, distance, sanitizer, buy, protect |
+| 7 | home, work, stay, school, safe, family, children, schools, kids, parents, day, time, online, child, students, friends, families |
+| 9 | people, media, stop, government, don, covid, fake, wrong, science, political, pandemic, truth, blame, fear, real, fact, stupid |
+| 10 | trump, president, america, white, pandemic, house, vote, police, bill, response, american, biden, election, states, donald |
+| 11 | cases, deaths, 2020, 000, total, number, death, confirmed, india, rate, coronavirus, 10, reported, million, 24, recovered, days |
+| 12 | virus, vaccine, human, influenza, transmission, diseases, infectious, species, animals, samples, study, infected, strains |
 | 13 | corona, india, sir, govt, due, students, situation, pm, exams, lockdown, delhi, indian, exam, fight, modi, minister, request |
-| 15 | cells, al, viral, virus, protein, de, cell, viruses, infection, rna, proteins, human, expression, 10, gene, fig, la, dna, activity |
-| 16 | people, covid, virus, die, died, death, flu, vaccine, lives, care, dying, don, sick, numbers, homes, infected, risk, immunity, dead |
-| 17 | data, model, al, time, number, based, disease, analysis, information, study, 2020, models, results, population, system, set, rate, approach, epidemic |
+| 15 | cells, al, viral, virus, protein, cell, viruses, infection, rna, proteins, human, expression, 10, gene, fig, dna, activity |
+| 16 | people, covid, virus, die, death, flu, vaccine, lives, care, dying, don, sick, numbers, homes, infected, risk, immunity, dead |
+| 17 | data, model, time, number, based, disease, analysis, information, study, models, results, population, system, set, rate, approach |
 | 18 | things, ve, time, don, thing, good, happen, people, lot, feel, happened, bad, back, life, make, ago, years, long, ll |
-| 19 | business, money, pay, economy, market, crisis, pandemic, economic, impact, jobs, due, businesses, industry, financial, food, companies |
-| 20 | china, world, virus, country, chinese, pandemic, global, war, people, wuhan, south, spread, africa, human, rights, international, europe |
+| 19 | business, money, pay, economy, market, crisis, pandemic, economic, impact, jobs, businesses, industry, financial, food |
+| 20 | china, world, virus, country, chinese, pandemic, global, war, people, wuhan, south, spread, africa, human, rights, europe |
 | 21 | corona, god, shit, virus, fuck, gonna, fucking, lol, man, love, covid, bc, ass, im, damn, ur, dont, wanna, ppl |
 | 22 | positive, test, state, hospital, quarantine, https, covid, coronavirus, health, symptoms, days, city, contact, case, app |
-| 24 | https, coronavirus, news, live, latest, amid, outbreak, updates, uk, daily, report, top, bbc, times, wave, breaking, drug, sign, story |
+| 24 | https, coronavirus, news, live, latest, amid, outbreak, updates, uk, daily, report, top, bbc, times, wave, breaking, drug, sign |
 
-For example, Topics 0, 15 and 17 are mostly coming from research updates, Topic 24 from forwarded news items, while Topics 16, 18, 21 are mostly coming from informal exchanges.  There are also topics discussed in specific communities (topics 10 and 13).
+For example, Topics 0, 15 and 17 are mostly coming from research updates, Topics 11 and 24 are from forwarded news items, while Topics 16, 18, 21 are mostly coming from informal exchanges.  There are also topics discussed in specific communities (topics 4, 10 and 13).
