@@ -1,25 +1,60 @@
 # ETM
 
-My modifications to the code for Embedding Topic Modeling.  My main contributions concern a code to convert a one-line corpus into a BoW representation and to apply an existing topic model to this dataset. 
+My modifications to the code for Embedding Topic Modeling.  My main contributions concern adding a code to convert a one-line corpus into a BoW representation and to apply an existing topic model to this dataset. 
 
 First use your own corpus in the one-line per document format to create a topic model:
 ```
-python3 data_new.py -c CORPUS.ol -s DATADIR
+python3 data_new.py -c CORPUS.ol -o DATADIR
+```
+
+The default list of stop words for the first step of BoW processing is for English. The scripts directory also has sample stop word lists for other languages, e.g.,
+```
+python3 data_new.py -c CORPUS-fr.ol -o DATADIR -s stop-fr.txt
+```
+
+If the one-line file has NOT been tokenised, it might be better to tokenise it (and possibly lower-case it) before BoW processing, for example as:
+```
+./tokenise1.sh <CORPUS-fr.ol | awk '{print(tolower($0))}' >CORPUS-fr.ollc 
+```
+
+You can create and evaluate the model as:
+```
 python3 main.py --mode train --dataset dataname --data_path DATADIR --num_topics 50 --train_embeddings 1 --epochs 50
 python3 main.py --mode eval --dataset dataname --data_path DATADIR --num_topics 50 --td --tc --tp --load_from results/etm_dataname_K_50....
 ```
-The default list of stop words for corpus encoding is for English. The scripts directory also has sample stop word lists for other languages, e.g.,
-```
-python3 data_new.py -c CORPUS-fr.ol -s DATADIR -o
-```
-
 
 Now this model can be applied to a new corpus
 ```
-python3 data_new.py -c CORPUS-NEW.ol -d DATADIR/vocab.pkl -s DATADIR-NEW
+python3 data_new.py -c CORPUS-NEW.ol -d DATADIR/vocab.pkl -o DATADIR-NEW
 python3 main.py --mode apply --dataset dataname --data_path DATADIR-NEW --output CORPUSNEW.topics --load_from results/etm_dataname_K_50....
 ```
 
 The remainder is practically the same as in the original repository (https://github.com/adjidieng/ETM) 
 
 This has been tried with Python 3.7 and Pytorch 1.7.1.
+
+ETM is particularly useful for estimating topic models from short texts such as those from social media. I have created this update for our project on analysis of [COVID communication](http://corpus.leeds.ac.uk/serge/covid/) where it was used to estimate the topics of COVID-related Twitter streams in our collection:
+
+| 0 | patients, disease, infection, respiratory, study, clinical, patient, severe, treatment, symptoms, risk, acute, studies, blood, data, viral |
+| 1 | https, corona, covid, pandemic, virus, lockdown, time, good, today, covid19, read, great, make, day, fight, world, hope, free |
+| 3 | play, game, season, year, show, time, love, playing, music, team, dropped, night, video, players, fans, tv, football, person, games |
+| 4 | uk, government, lockdown, coronavirus, people, travel, nhs, restrictions, public, johnson, week, measures, rules, health, boris, minister, england |
+| 5 | health, care, pandemic, public, medical, healthcare, risk, research, social, patients, services, disease, staff, mental, measures, patient, information |
+| 6 | mask, social, masks, distancing, face, wear, hands, hand, wearing, air, water, food, spread, wash, distance, hai, sanitizer, buy, protect |
+| 7 | home, work, stay, working, school, safe, family, children, back, schools, kids, parents, day, time, online, child, students, friends, families |
+| 9 | people, media, stop, government, don, covid, fake, wrong, science, political, pandemic, truth, blame, fear, real, fact, stupid, twitter |
+| 10 | trump, president, americans, america, white, pandemic, house, vote, police, bill, response, american, biden, election, states, donald |
+| 11 | cases, deaths, 2020, 000, total, number, death, confirmed, india, rate, coronavirus, 10, reported, million, 24, recovered, days, day, update |
+| 12 | virus, vaccine, human, influenza, transmission, diseases, vaccines, infectious, species, animals, samples, infections, study, infected, strains |
+| 13 | corona, india, sir, govt, due, students, situation, pm, exams, lockdown, delhi, indian, exam, fight, modi, minister, request |
+| 15 | cells, al, viral, virus, protein, de, cell, viruses, infection, rna, proteins, human, expression, 10, gene, fig, la, dna, activity |
+| 16 | people, covid, virus, die, died, death, flu, vaccine, lives, care, dying, don, sick, numbers, homes, infected, risk, immunity, dead |
+| 17 | data, model, al, time, number, based, disease, analysis, information, study, 2020, models, results, population, system, set, rate, approach, epidemic |
+| 18 | things, ve, time, don, thing, good, happen, people, lot, feel, happened, bad, back, life, make, ago, years, long, ll |
+| 19 | business, money, pay, economy, market, crisis, pandemic, economic, impact, jobs, due, businesses, industry, financial, food, companies |
+| 20 | china, world, virus, country, chinese, pandemic, global, war, people, wuhan, south, spread, africa, human, rights, international, europe |
+| 21 | corona, god, shit, virus, fuck, gonna, fucking, lol, man, love, covid, bc, ass, im, damn, ur, dont, wanna, ppl |
+| 22 | positive, test, state, hospital, quarantine, https, covid, coronavirus, health, symptoms, days, city, contact, case, app |
+| 24 | https, coronavirus, news, live, latest, amid, outbreak, updates, uk, daily, report, top, bbc, times, wave, breaking, drug, sign, story |
+
+For example, Topics 0, 15 and 17 are mostly coming from research updates, Topic 24 from forwarded news items, while Topics 16, 18, 21 are mostly coming from informal exchanges.  There are also topics discussed in specific communities (topics 10 and 13).
