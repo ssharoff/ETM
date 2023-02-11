@@ -1,8 +1,8 @@
 # ETM
 
-My modifications to the code for Embedding Topic Modeling.  My main contributions concern adding a code to convert a one-line corpus into a BoW representation and to apply an existing topic model to this dataset. 
+My modifications to the code for Embedding Topic Modeling.  My main contributions concern adding a Python script to convert a one-line corpus into a BoW representation and to apply an existing topic model to this dataset. 
 
-First use your own corpus in the one-line per document format to create a topic model:
+First use your own corpus in the one-line per document format to encode it to a BoW matrix:
 ```
 python3 data_new.py -c CORPUS.ol -o DATADIR
 ```
@@ -17,23 +17,23 @@ If the one-line file has NOT been tokenised, it might be better to tokenise it (
 ./tokenise1.sh <CORPUS-fr.ol | awk '{print(tolower($0))}' >CORPUS-fr.ollc 
 ```
 
-You can create and evaluate the model as:
+You can create and evaluate a new topic model from this dataset as:
 ```
 python3 main.py --mode train --dataset dataname --data_path DATADIR --num_topics 50 --train_embeddings 1 --epochs 50
 python3 main.py --mode eval --dataset dataname --data_path DATADIR --num_topics 50 --td --tc --tp --load_from results/etm_dataname_K_50....
 ```
 
-Now this model can be applied to a new corpus
+Now this model can be applied to a new corpus by encoding it with the same dictionary as your original model first:
 ```
 python3 data_new.py -c CORPUS-NEW.ol -d DATADIR/vocab.pkl -o DATADIR-NEW
 python3 main.py --mode apply --dataset dataname --data_path DATADIR-NEW --output CORPUSNEW.topics --load_from results/etm_dataname_K_50....
 ```
 
-The remainder is practically the same as in the original repository (https://github.com/adjidieng/ETM) 
+The remainder is practically the same as in the original repository (https://github.com/adjidieng/ETM) apart from more systematic parameters.
 
-This has been tried with Python 3.7 and Pytorch 1.7.1.
+This has been tried to work with Python 3.7 and Pytorch 1.7.1, but other versions are likely to be ok as well.
 
-ETM is particularly useful for estimating and interpreting topic models from short texts such as those from social media. I have created this update for our project on analysis of [COVID communication](http://corpus.leeds.ac.uk/serge/covid/) where it was used to estimate the topics of COVID-related Twitter streams in our collection:
+ETM is particularly useful for estimating and interpreting topic models from short texts such as those from social media. I have created this update for our project on analysis of [COVID communication](http://corpus.leeds.ac.uk/serge/covid/) where it was used to estimate the topics of COVID-related texts in our collection:
 
 | id | Keywords | 
 |------|------------|
@@ -59,4 +59,4 @@ ETM is particularly useful for estimating and interpreting topic models from sho
 | 22 | positive, test, state, hospital, quarantine, https, covid, coronavirus, health, symptoms, days, city, contact, case, app |
 | 24 | https, coronavirus, news, live, latest, amid, outbreak, updates, uk, daily, report, top, bbc, times, wave, breaking, drug, sign |
 
-For example, Topics 0, 15 and 17 are mostly coming from research updates, Topics 11 and 24 are from forwarded news items, while Topics 16, 18, 21 are mostly coming from informal exchanges.  There are also topics discussed in specific communities (topics 4, 10 and 13).
+For example, Topics 0, 15 and 17 are mostly coming from research updates, Topics 11 and 24 are from forwarded news items, while Topics 16, 18, 21 are mostly coming from informal exchanges.  The model also detects topics discussed in specific communities (Topics 4, 10 and 13).
