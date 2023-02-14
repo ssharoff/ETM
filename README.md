@@ -7,6 +7,8 @@ First use your own corpus in the one-line per document format to encode it to a 
 python3 data_new.py -c CORPUS.ol -o DATADIR
 ```
 
+An example is available in the scripts directory.
+
 The default list of stop words for the first step of BoW processing is for English. The scripts directory also has sample stop word lists for other languages, e.g.,
 ```
 python3 data_new.py -c CORPUS-fr.ol -o DATADIR -s stop-fr.txt
