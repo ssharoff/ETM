@@ -27,8 +27,8 @@ parser = argparse.ArgumentParser(description='The Embedded Topic Model')
 parser.add_argument('--mode', type=str, default='train', help='train, eval or apply model')
 
 ### data and file related arguments
-parser.add_argument('--dataset', type=str, default='20ng', help='name of corpus')
-parser.add_argument('--data_path', type=str, default='data/20ng', help='directory containing data')
+parser.add_argument('--dataset', type=str, default='20ng', help='dataset name')
+parser.add_argument('-b', '--data_path', type=str, default='data/20ng', help='directory containing BoW data')
 parser.add_argument('--emb_path', type=str, default='data/20ng_embeddings.txt', help='file containing word embeddings')
 parser.add_argument('--save_path', type=str, default='./results', help='path to save results')
 parser.add_argument('-o', '--output', type=str, default='', help='the name of the output file')
@@ -66,12 +66,12 @@ parser.add_argument('--visualize_every', type=int, default=10, help='when to vis
 parser.add_argument('--eval_batch_size', type=int, default=1000, help='input batch size for evaluation')
 parser.add_argument('-l', '--load_from', type=str, default='', help='the name of the ckpt to eval from')
 parser.add_argument('--queries', type=str, default='', help='space-separated words to visualise embeddings')
-parser.add_argument('--tc', default=False, action='store_true', help='whether to compute topic coherence')
+parser.add_argument('--tc', default=False, action='store_true', help='whether to compute topic coherence; this is time consuming')
 parser.add_argument('--td', default=False, action='store_true', help='whether to compute topic diversity')
 parser.add_argument('--tp', default=False, action='store_true', help='whether to compute topic proportions')
-parser.add_argument('--threshold', type=float, default=0.5, help='threshold for including less significant topics into predictions')
+parser.add_argument('--threshold', type=float, default=0.5, help='threshold for printing less significant topics')
 parser.add_argument('-v', '--verbosity', type=int, default=1)
-parser.add_argument('--topK', type=int, default=3, help='number of topics to output for predictions')
+parser.add_argument('--topK', type=int, default=3, help='max number of topics for predictions')
 
 
 args = parser.parse_args()

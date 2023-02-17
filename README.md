@@ -1,6 +1,6 @@
 # ETM
 
-My modifications to the code for Embedding Topic Modeling.  My main contributions concern adding a Python script to convert a one-line corpus into a BoW representation and to apply an existing topic model to this dataset. 
+My modifications to the code for Embedding Topic Modeling.  My main contributions concern adding a Python script to convert a one-line corpus into a BoW (bag of words) representation and to apply an existing topic model to this dataset. 
 
 First use your own corpus in the one-line per document format to encode it to a BoW matrix:
 ```
@@ -19,16 +19,16 @@ If the one-line file has NOT been tokenised, it might be better to tokenise it (
 ./tokenise1.sh <CORPUS-fr.ol | awk '{print(tolower($0))}' >CORPUS-fr.ollc 
 ```
 
-You can create and evaluate a new topic model from this dataset as:
+You can create a new topic model from this dataset and evaluate it:
 ```
 python3 main.py --mode train --dataset dataname --data_path DATADIR --num_topics 50 --train_embeddings 1 --epochs 50
 python3 main.py --mode eval --dataset dataname --data_path DATADIR --num_topics 50 --td --tc --tp --load_from results/etm_dataname_K_50....
 ```
 
-Now this model can be applied to a new corpus by encoding it with the same dictionary as your original model first:
+Now this model can be applied to a new corpus by extracting BoW with the same dictionary as your original model first:
 ```
-python3 data_new.py -c CORPUS-NEW.ol -d DATADIR/vocab.pkl -o DATADIR-NEW
-python3 main.py --mode apply --dataset dataname --data_path DATADIR-NEW --output CORPUSNEW.topics --load_from results/etm_dataname_K_50....
+python3 data_new.py -c CORPUS-NEW.ol -d DATADIR/vocab.pkl -o BOW-NEW
+python3 main.py --mode apply --dataset dataname -b BOW-NEW --output CORPUSNEW.topics --load_from results/etm_dataname_K_50....
 ```
 
 The remainder is practically the same as in the original repository (https://github.com/adjidieng/ETM) apart from more systematic parameters.
@@ -37,8 +37,8 @@ This has been tried to work with Python 3.7 and Pytorch 1.7.1, but other version
 
 For a large general-purpose corpus, I have achieved fairly good interpretable results by estimating 25 topics on [ukWac](https://wacky.sslmit.unibo.it/doku.php?id=corpora) with the resulting Topic Diversity of 0.78 and Topic Coherence of 0.195. If you have a tokenised corpus in the one-line format, you can apply this model [(downloadable from here)](http://corpus.leeds.ac.uk/serge/corpora/etm_ukwac_K_25_Htheta_530_RhoSize_300) to your corpus by encoding the corpus with the same ukWac dictionary first and then applying the model:
 ```
-python3 data_new.py -c CORPUS-NEW.ol -d ../results/vocab.pkl -o DATADIR-NEW
-python3 main.py --mode apply --data_path DATADIR-NEW -o CORPUSNEW.topics -l results/etm_ukwac_K_25_Htheta_530_RhoSize_300
+python3 data_new.py -c CORPUS-NEW.ol -d ../results/vocab.pkl -o BOW-NEW
+python3 main.py --mode apply -b BOW-NEW -d results/vocab.pkl -l results/etm_ukwac_K_25_Htheta_530_RhoSize_300
 ```
 
 ETM is particularly useful for estimating and interpreting topic models from short texts such as those from social media. I have created this update for our project on analysis of [COVID communication](http://corpus.leeds.ac.uk/serge/covid/) where it was used to estimate the topics of COVID-related texts in our collection:
