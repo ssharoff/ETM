@@ -35,6 +35,12 @@ The remainder is practically the same as in the original repository (https://git
 
 This has been tried to work with Python 3.7 and Pytorch 1.7.1, but other versions are likely to be ok as well.
 
+For a large general-purpose corpus, I have achieved fairly good interpretable results by estimating 25 topics on [ukWac](https://wacky.sslmit.unibo.it/doku.php?id=corpora) with the resulting Topic Diversity of 0.78 and Topic Coherence of 0.195. If you have a tokenised corpus in the one-line format, you can apply this model [(downloadable from here)](http://corpus.leeds.ac.uk/serge/corpora/etm_ukwac_K_25_Htheta_530_RhoSize_300) to your corpus by encoding the corpus with the same ukWac dictionary first and then applying the model:
+```
+python3 data_new.py -c CORPUS-NEW.ol -d ../results/vocab.pkl -o DATADIR-NEW
+python3 main.py --mode apply --data_path DATADIR-NEW -o CORPUSNEW.topics -l results/etm_ukwac_K_25_Htheta_530_RhoSize_300
+```
+
 ETM is particularly useful for estimating and interpreting topic models from short texts such as those from social media. I have created this update for our project on analysis of [COVID communication](http://corpus.leeds.ac.uk/serge/covid/) where it was used to estimate the topics of COVID-related texts in our collection:
 
 | id | Keywords | 
