@@ -19,13 +19,20 @@ If the one-line file has NOT been tokenised, it might be better to tokenise it (
 ./tokenise1.sh <CORPUS-fr.ol | awk '{print(tolower($0))}' >CORPUS-fr.ollc 
 ```
 
+For other languages more advanced pre-processing would be needed, for example, proper segmentation for Chinese or lemmatisation for Russian or Turkish.  Anyway, the ways to estimate a topic model remain the same as long as the file is converted from the one-document-per-line format.
+
 You can create a new topic model from this dataset and evaluate it:
 ```
-python3 main.py --mode train --dataset dataname --data_path DATADIR --num_topics 50 --train_embeddings 1 --epochs 50
-python3 main.py --mode eval --dataset dataname --data_path DATADIR --num_topics 50 --td --tc --tp --load_from results/etm_dataname_K_50....
+python3 main.py --mode train --dataset name --data_path DATADIR --num_topics 50 --epochs 50
+python3 main.py --mode eval --data_path DATADIR --td --tc --tp --load_from results/etm_name_K_50_Htheta_530_RhoSize_300
 ```
 
-Now this model can be applied to a new corpus by extracting BoW with the same dictionary as your original model first:
+The product of the topic diversity (the --td argument) by the topic coherence (the --tc argument) is a useful measure to evaluate how good the hyper-parameters are.  The most important thing is to use the right number of topics.  For other parameters, please run
+```
+python3 main.py -h
+```
+
+A model can be applied to a new corpus by first making a BoW dataset using the *same* dictionary as our original model (the -d argument):
 ```
 python3 data_new.py -c CORPUS-NEW.ol -d DATADIR/vocab.pkl -o BOW-NEW
 python3 main.py --mode apply --dataset dataname -b BOW-NEW --output CORPUSNEW.topics --load_from results/etm_dataname_K_50....

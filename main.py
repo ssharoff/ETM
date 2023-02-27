@@ -38,7 +38,7 @@ parser.add_argument('-d', '--dictionary', type=str, help='existing dictionary fi
 parser.add_argument('-K', '--num_topics', type=int, default=0, help='number of topics')
 parser.add_argument('--rho_size', type=int, default=300, help='dimension of rho')
 parser.add_argument('--emb_size', type=int, default=300, help='dimension of embeddings')
-parser.add_argument('--t_hidden_size', type=int, default=800, help='dimension of hidden space of q(theta)')
+parser.add_argument('--t_hidden_size', type=int, default=530, help='dimension of hidden space of q(theta)')
 parser.add_argument('--theta_act', type=str, default='relu', help='tanh, softplus, relu, rrelu, leakyrelu, elu, selu, glu)')
 parser.add_argument('--best', type=str, default='val_ppl', help='Saving the model for the best: val_ppl, kl_theta, nelbo)')
 parser.add_argument('--train_embeddings', type=int, default=1, help='whether to fix rho or train it')
