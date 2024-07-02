@@ -7,21 +7,21 @@ First use your own corpus in the one-line per document format to encode it to a 
 python3 data_new.py -c CORPUS.ol -o DATADIR
 ```
 
-An example is available in the scripts directory.
+An example of the source file is available in the scripts directory (covid-tweets-sample.ol.xz).
 
 The default list of stop words for the first step of BoW processing is for English. The scripts directory also has sample stop word lists for other languages, e.g.,
 ```
 python3 data_new.py -c CORPUS-fr.ol -o DATADIR -s stop-fr.txt
 ```
 
-If the one-line file has NOT been tokenised, it might be better to tokenise it (and possibly lower-case it) before BoW processing, for example as:
+If your one-line file has NOT been tokenised, it might be better to tokenise it (and possibly lower-case it) before BoW processing, for example as:
 ```
 ./tokenise1.sh <CORPUS-fr.ol | awk '{print(tolower($0))}' >CORPUS-fr.ollc 
 ```
 
-For other languages more advanced pre-processing would be needed, for example, proper segmentation for Chinese or lemmatisation for Russian or Turkish.  Anyway, the ways to estimate a topic model remain the same as long as the file is converted from the one-document-per-line format.
+For other languages more advanced pre-processing would be needed, for example, proper segmentation for Chinese or lemmatisation for Russian or Turkish.  Anyway, the ways to estimate a topic model remain the same as long as the file for creating the BoW dataset is in the one-document-per-line format.
 
-You can create a new topic model from this dataset and evaluate it:
+You can create a new topic model from this dataset and evaluate it by running:
 ```
 python3 main.py --mode train --dataset name --data_path DATADIR --num_topics 50 --epochs 50
 python3 main.py --mode eval --data_path DATADIR --td --tc --tp --load_from results/etm_name_K_50_Htheta_530_RhoSize_300
@@ -32,7 +32,7 @@ The product of the topic diversity (the --td argument) by the topic coherence (t
 python3 main.py -h
 ```
 
-A model can be applied to a new corpus by first making a BoW dataset using the *same* dictionary as our original model (the -d argument):
+A model can be applied to a new corpus by first making a BoW dataset for it using the *same* dictionary as our original model (the -d argument):
 ```
 python3 data_new.py -c CORPUS-NEW.ol -d DATADIR/vocab.pkl -o BOW-NEW
 python3 main.py --mode apply --dataset dataname -b BOW-NEW --output CORPUSNEW.topics --load_from results/etm_dataname_K_50....
@@ -40,11 +40,11 @@ python3 main.py --mode apply --dataset dataname -b BOW-NEW --output CORPUSNEW.to
 
 The remainder is practically the same as in the original repository (https://github.com/adjidieng/ETM) apart from more systematic parameters.
 
-This has been tried to work with Python 3.7 and Pytorch 1.7.1, but other versions are likely to be ok as well.
+This has been tested to work with Python 3.7 and Pytorch 1.7.1, but other versions are likely to be ok as well.
 
-For a large general-purpose corpus, I have achieved fairly good interpretable results by estimating 25 topics on [ukWac](https://wacky.sslmit.unibo.it/doku.php?id=corpora) with the resulting Topic Diversity of 0.78 and Topic Coherence of 0.195. If you have a tokenised corpus in the one-line format, you can apply this model [(downloadable from here)](http://corpus.leeds.ac.uk/serge/corpora/etm_ukwac_K_25_Htheta_530_RhoSize_300) to your corpus by encoding the corpus with the same ukWac dictionary first and then applying the model:
+For a large general-purpose corpus, I have achieved fairly good interpretable results by estimating 25 topics on [ukWac](https://wacky.sslmit.unibo.it/doku.php?id=corpora) with the resulting Topic Diversity of 0.78 and Topic Coherence of 0.195. If you have a tokenised corpus in the one-line format, you can apply this model (from the ./results directory) to your corpus by encoding this corpus first with the same ukWac dictionary into a BoW dataset and then applying the model:
 ```
-python3 data_new.py -c CORPUS-NEW.ol -d ../results/vocab.pkl -o BOW-NEW
+python3 scripts/data_new.py -c CORPUS-NEW.ol -d results/vocab.pkl -o BOW-NEW
 python3 main.py --mode apply -b BOW-NEW -d results/vocab.pkl -l results/etm_ukwac_K_25_Htheta_530_RhoSize_300
 ```
 
