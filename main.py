@@ -309,17 +309,19 @@ def evaluate(m, source, tc=False, td=False):
         cur_loss = acc_loss / cnt
         ppl_dc = round(math.exp(cur_loss), 1)
         print('*'*100,file=outfile)
-        print('{} Doc Completion PPL: {}'.format(source.upper(), ppl_dc),file=outfile)
+        print(f'{source.upper()} Doc Completion PPL: {ppl_dc}', file=outfile)
         print('*'*100,file=outfile)
         if tc or td:
             beta = beta.data.cpu().numpy()
             if td:
-                print(f'topic diversity is: {get_topic_diversity(beta, 25)}', file=outfile)
+                td_val=get_topic_diversity(beta, 25) # for top 25 words
+                print(f'topic diversity is: {td_val}', file=outfile)
                 outfile.flush()
-                # os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
-                # os.fsync(sys.stderr.fileno()) 
             if tc:
-                print(f'Topic coherence is: {get_topic_coherence(beta, train_tokens, vocab)}', file=outfile)
+                tc_val=get_topic_coherence(beta, train_tokens, vocab)
+                print(f'Topic coherence is: {tc_val}', file=outfile)
+            if td and tc:
+                print(f'TD*TC={round(td_val*tc_val,4)}', file=outfile)
         return ppl_dc
 
 if args.mode == 'train':
@@ -354,8 +356,6 @@ if args.mode == 'train':
             visualize(model)
         all_val_ppls.append(val_ppl)
         outfile.flush()
-        # os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
-        # os.fsync(sys.stderr.fileno()) 
     with open(ckpt, 'rb') as f:
         model = torch.load(f,map_location=torch.device(device))
     model = model.to(device)
@@ -398,11 +398,9 @@ elif args.mode=='eval':
                 gamma = beta[k]
                 top_word_ids = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
                 topic_words = [vocab[a] for a in top_word_ids]
-                print('Topic {}: {}'.format(k, topic_words),file=outfile)
+                print(f'Topic {k}: {topic_words}',file=outfile)
 
         outfile.flush()
-        # os.fsync(outfile.fileno())  # on our HPC the killed jobs don't flush to disk
-        # os.fsync(sys.stderr.fileno()) 
 
         ## show full topics
         print('\n',file=outfile)
@@ -410,7 +408,7 @@ elif args.mode=='eval':
             gamma = beta[k]
             top_word_ids = list(gamma.cpu().numpy().argsort()[-args.num_words+1:][::-1])
             topic_words = [(vocab[a],float(gamma[a])) for a in top_word_ids]
-            print('Topic {}: {}'.format(k, topic_words),file=outfile)
+            print(f'Topic {k}: {topic_words}',file=outfile)
 
         if args.train_embeddings:
             ## show etm embeddings 
