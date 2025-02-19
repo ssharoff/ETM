@@ -1,6 +1,6 @@
 # ETM
 
-My modifications to the code for Embedding Topic Modeling.  My main contributions concern adding a Python script to convert a one-line corpus into a BoW (bag of words) representation and to apply an existing topic model to this dataset. 
+These are some modifications to the code for Embedding Topic Modeling.  My main contributions concern adding a Python script to convert a one-line corpus into a BoW (bag of words) representation and to apply an existing topic model to this dataset. 
 
 First use your own corpus in the one-line per document format to encode it to a BoW matrix:
 ```
@@ -27,7 +27,7 @@ python3 main.py --mode train --dataset name --data_path DATADIR --num_topics 50 
 python3 main.py --mode eval --data_path DATADIR --td --tc --tp --load_from results/etm_name_K_50_Htheta_530_RhoSize_300
 ```
 
-The product of the topic diversity (the --td argument) by the topic coherence (the --tc argument) is a useful measure to evaluate how good the hyper-parameters are.  The most important thing is to use the right number of topics.  For other parameters, please run
+The product of the topic diversity (the --td argument) by the topic coherence (the --tc argument) is a useful measure to evaluate how good the hyper-parameters are.  The most important thing is to choose the right number of topics for your dataset.  For other parameters, please run
 ```
 python3 main.py -h
 ```
@@ -45,8 +45,27 @@ This has been tested to work with Python 3.7 and Pytorch 1.7.1, but other versio
 For a large general-purpose corpus, I have achieved fairly good interpretable results by estimating 25 topics on [ukWac](https://wacky.sslmit.unibo.it/doku.php?id=corpora) with the resulting Topic Diversity of 0.78 and Topic Coherence of 0.195. If you have a tokenised corpus in the one-line format, you can apply this model (from the ./results directory) to your corpus by encoding this corpus first with the same ukWac dictionary into a BoW dataset and then applying the model:
 ```
 python3 scripts/data_new.py -c CORPUS-NEW.ol -d results/vocab.pkl -o BOW-NEW
-python3 main.py --mode apply -b BOW-NEW -d results/vocab.pkl -l results/etm_ukwac_K_25_Htheta_530_RhoSize_300
+python3 main.py --mode apply -b BOW-NEW -d results/vocab.pkl -l results/etm_ukwac_K_25_Htheta_350_RhoSize_220
 ```
+
+I've applied this model to test the degree to which pre-trained language models (like Bert) can be fooled by topic distributions
+
+```
+@inproceedings{roussinov-sharoff-2023-bert,
+    title = "{BERT} Goes Off-Topic: Investigating the Domain Transfer Challenge using Genre Classification",
+    author = "Roussinov, Dmitri  and Sharoff, Serge",
+    editor = "Bouamor, Houda  and Pino, Juan  and Bali, Kalika",
+    booktitle = "Findings of the Association for Computational Linguistics: EMNLP 2023",
+    month = dec,
+    year = "2023",
+    address = "Singapore",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.findings-emnlp.34/",
+    doi = "10.18653/v1/2023.findings-emnlp.34",
+    pages = "468--483"
+}
+```
+
 
 ETM is particularly useful for estimating and interpreting topic models from short texts such as those from social media. I have created this update for our project on analysis of [COVID communication](http://corpus.leeds.ac.uk/serge/covid/) where it was used to estimate the topics of COVID-related texts in our collection:
 
@@ -75,3 +94,19 @@ ETM is particularly useful for estimating and interpreting topic models from sho
 | 24 | https, coronavirus, news, live, latest, amid, outbreak, updates, uk, daily, report, top, bbc, times, wave, breaking, drug, sign |
 
 For example, Topics 0, 15 and 17 are mostly coming from research updates, Topics 11 and 24 are from forwarded news items, while Topics 16, 18, 21 are mostly coming from informal exchanges.  The model also detects topics discussed in specific communities (Topics 4, 10 and 13).
+
+
+This has been reported in
+```
+@article{boumechaal2024attitudes,
+  title={Attitudes, communicative functions, and lexicogrammatical features of anti-vaccine discourse on Telegram},
+  author={Boumechaal, Souad and Sharoff, Serge},
+  journal={Applied Corpus Linguistics},
+  volume={4},
+  number={2},
+  year={2024},
+  publisher={Elsevier},
+  url = "https://ssharoff.github.io/publications/2023-applied-covid.pdf",
+  doi="https://doi.org/10.1016/j.acorp.2024.100095"
+}
+```
